@@ -61,3 +61,13 @@ export function updatePassword(newPassword, cfg) {
   saveConfig(cfg);
   return true;
 }
+
+export function updateServerName(newName, cfg) {
+  if (!newName || typeof newName !== 'string' || !newName.trim()) {
+    throw new Error('Server name cannot be empty.');
+  }
+  cfg.serverName = newName.trim();
+  saveConfig(cfg);
+  return cfg.serverName;
+}
+

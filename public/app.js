@@ -31,21 +31,39 @@ const uploadStatus = document.getElementById('uploadStatus');
 const uploadProgressFill = document.getElementById('uploadProgressFill');
 const uploadText = document.getElementById('uploadText');
 
-const localIpBadge = document.getElementById('localIpBadge');
-const localIpText = document.getElementById('localIpText');
+const headerServerName = document.getElementById('headerServerName');
 const tunnelBadge = document.getElementById('tunnelBadge');
 const tunnelStatusText = document.getElementById('tunnelStatusText');
 const batteryBadge = document.getElementById('batteryBadge');
 const batteryText = document.getElementById('batteryText');
 const storageStats = document.getElementById('storageStats');
 const storageBarFill = document.getElementById('storageBarFill');
-const tunnelToggleBtn = document.getElementById('tunnelToggleBtn');
+const folderStatsPill = document.getElementById('folderStatsPill');
 
-const connectionsBtn = document.getElementById('connectionsBtn');
-const mobileConnectionsBtn = document.getElementById('mobileConnectionsBtn');
-const activeConnectionsBadge = document.getElementById('activeConnectionsBadge');
-const connectionsModal = document.getElementById('connectionsModal');
-const connectionsCloseBtn = document.getElementById('connectionsCloseBtn');
+// Unified Settings Modal Elements
+const settingsModal = document.getElementById('settingsModal');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+const settingsConnCount = document.getElementById('settingsConnCount');
+
+// Settings: General & LAN
+const serverNameForm = document.getElementById('serverNameForm');
+const serverNameInput = document.getElementById('serverNameInput');
+const settingsLocalUrl = document.getElementById('settingsLocalUrl');
+const copyLocalUrlBtn = document.getElementById('copyLocalUrlBtn');
+const settingsLocalQrImg = document.getElementById('settingsLocalQrImg');
+
+// Settings: Remote Access
+const remoteSwitchCheckbox = document.getElementById('remoteSwitchCheckbox');
+const remoteStatusBadge = document.getElementById('remoteStatusBadge');
+const remoteStatusExplanation = document.getElementById('remoteStatusExplanation');
+const remoteActiveSection = document.getElementById('remoteActiveSection');
+const remoteInactiveSection = document.getElementById('remoteInactiveSection');
+const remoteModalLink = document.getElementById('remoteModalLink');
+const copyRemoteUrlBtn = document.getElementById('copyRemoteUrlBtn');
+const remoteModalQrImg = document.getElementById('remoteModalQrImg');
+
+// Settings: Connected Sessions
 const tabActiveBtn = document.getElementById('tabActiveBtn');
 const tabHistoryBtn = document.getElementById('tabHistoryBtn');
 const tabActiveContent = document.getElementById('tabActiveContent');
@@ -53,11 +71,13 @@ const tabHistoryContent = document.getElementById('tabHistoryContent');
 const activeConnectionsList = document.getElementById('activeConnectionsList');
 const historyConnectionsList = document.getElementById('historyConnectionsList');
 
-const guestsBtn = document.getElementById('guestsBtn');
-const guestsModal = document.getElementById('guestsModal');
-const guestsCloseBtn = document.getElementById('guestsCloseBtn');
+// Settings: Guest Users
 const createGuestForm = document.getElementById('createGuestForm');
 const guestsList = document.getElementById('guestsList');
+
+// Settings: Master Password
+const changePasswordForm = document.getElementById('changePasswordForm');
+const settingsMsg = document.getElementById('settingsMsg');
 
 const editorModal = document.getElementById('editorModal');
 const editorFileName = document.getElementById('editorFileName');
@@ -71,28 +91,6 @@ const previewContent = document.getElementById('previewContent');
 const previewDownloadBtn = document.getElementById('previewDownloadBtn');
 const previewCloseBtn = document.getElementById('previewCloseBtn');
 
-const remoteAccessModal = document.getElementById('remoteAccessModal');
-const remoteModalBtn = document.getElementById('remoteModalBtn');
-const remoteCloseBtn = document.getElementById('remoteCloseBtn');
-const remoteStatusBadge = document.getElementById('remoteStatusBadge');
-const remoteStatusExplanation = document.getElementById('remoteStatusExplanation');
-const remoteSwitchCheckbox = document.getElementById('remoteSwitchCheckbox');
-const remoteActiveSection = document.getElementById('remoteActiveSection');
-const remoteInactiveSection = document.getElementById('remoteInactiveSection');
-const remoteModalLink = document.getElementById('remoteModalLink');
-const copyRemoteUrlBtn = document.getElementById('copyRemoteUrlBtn');
-const remoteModalQrImg = document.getElementById('remoteModalQrImg');
-const localModalLink = document.getElementById('localModalLink');
-const localModalQrImg = document.getElementById('localModalQrImg');
-const folderStatsPill = document.getElementById('folderStatsPill');
-
-const sidebarConnectionsItem = document.getElementById('sidebarConnectionsItem');
-const sidebarGuestsItem = document.getElementById('sidebarGuestsItem');
-const sidebarRemoteItem = document.getElementById('sidebarRemoteItem');
-const sidebarSettingsItem = document.getElementById('sidebarSettingsItem');
-const sidebarConnBadge = document.getElementById('sidebarConnBadge');
-
-
 const promptModal = document.getElementById('promptModal');
 const promptTitle = document.getElementById('promptTitle');
 const promptInput = document.getElementById('promptInput');
@@ -100,12 +98,6 @@ const promptForm = document.getElementById('promptForm');
 const promptCancelBtn = document.getElementById('promptCancelBtn');
 const promptCloseBtn = document.getElementById('promptCloseBtn');
 
-const settingsModal = document.getElementById('settingsModal');
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsCloseBtn = document.getElementById('settingsCloseBtn');
-const settingsCancelBtn = document.getElementById('settingsCancelBtn');
-const changePasswordForm = document.getElementById('changePasswordForm');
-const settingsMsg = document.getElementById('settingsMsg');
 
 const logoutBtn = document.getElementById('logoutBtn');
 const menuToggleBtn = document.getElementById('menuToggleBtn');
@@ -244,6 +236,11 @@ async function checkAuth() {
       return false;
     }
     const data = await res.json();
+    if (data.serverName) {
+      if (headerServerName) headerServerName.textContent = data.serverName;
+      if (serverNameInput) serverNameInput.value = data.serverName;
+      document.title = `${data.serverName} — Personal Cloud`;
+    }
     if (data.authenticated && data.user) {
       applyUserPermissions(data.user);
       return true;
@@ -946,14 +943,7 @@ async function loadConnections() {
   } catch (err) {}
 }
 
-function openConnectionsModal() {
-  loadConnections();
-  connectionsModal.classList.add('active');
-}
 
-connectionsBtn.onclick = openConnectionsModal;
-if (mobileConnectionsBtn) mobileConnectionsBtn.onclick = openConnectionsModal;
-connectionsCloseBtn.onclick = () => connectionsModal.classList.remove('active');
 
 tabActiveBtn.onclick = () => {
   tabActiveBtn.classList.add('active');
@@ -1047,13 +1037,7 @@ async function loadGuests() {
   } catch (err) {}
 }
 
-function openGuestsModal() {
-  loadGuests();
-  guestsModal.classList.add('active');
-}
 
-guestsBtn.onclick = openGuestsModal;
-guestsCloseBtn.onclick = () => guestsModal.classList.remove('active');
 
 createGuestForm.onsubmit = async (e) => {
   e.preventDefault();
@@ -1096,8 +1080,7 @@ async function updateMetrics() {
       const primaryNet = data.network[0];
       if (primaryNet) {
         currentLocalUrl = `http://${primaryNet.address}:${window.location.port || '7890'}`;
-        localIpText.textContent = `LAN: ${primaryNet.address}`;
-        localIpBadge.onclick = () => openRemoteModal();
+        updateLocalNetworkInfo();
       }
 
       if (data.battery && data.battery.percent !== null) {
@@ -1129,6 +1112,55 @@ async function updateTunnelStatus() {
   } catch (err) {}
 }
 
+// Local Network Info in Settings
+function updateLocalNetworkInfo() {
+  const localUrl = currentLocalUrl || window.location.origin;
+  if (settingsLocalUrl) {
+    settingsLocalUrl.href = localUrl;
+    settingsLocalUrl.textContent = localUrl;
+  }
+  fetch(`/api/system/qr?url=${encodeURIComponent(localUrl)}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.success && settingsLocalQrImg) settingsLocalQrImg.src = d.qr;
+    }).catch(() => {});
+}
+
+if (copyLocalUrlBtn) {
+  copyLocalUrlBtn.onclick = () => {
+    const localUrl = currentLocalUrl || window.location.origin;
+    navigator.clipboard.writeText(localUrl)
+      .then(() => showToast('Local LAN link copied to clipboard!'))
+      .catch(() => showToast('Failed to copy link'));
+  };
+}
+
+// Server Name Form Submission
+if (serverNameForm) {
+  serverNameForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = serverNameInput.value.trim();
+    if (!name) return;
+    try {
+      const res = await fetch('/api/settings/server-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (headerServerName) headerServerName.textContent = data.serverName;
+        document.title = `${data.serverName} — Personal Cloud`;
+        showToast(`Server name updated to "${data.serverName}"`);
+      } else {
+        showToast(data.error || 'Failed to update server name');
+      }
+    } catch (err) {
+      showToast('Error updating server name: ' + err.message);
+    }
+  };
+}
+
 function updateRemoteModalUI(data) {
   const isOnline = Boolean(data && data.running && data.url);
   if (remoteSwitchCheckbox) {
@@ -1142,12 +1174,6 @@ function updateRemoteModalUI(data) {
     remoteStatusExplanation.textContent = isOnline
       ? 'Your MacBook is securely reachable over the global internet via encrypted Cloudflare Tunnel.'
       : 'Remote tunnel is off. External internet traffic cannot reach your Mac. Only devices on your Wi-Fi / LAN can access.';
-  }
-
-  const localUrl = currentLocalUrl || window.location.origin;
-  if (localModalLink) {
-    localModalLink.href = localUrl;
-    localModalLink.textContent = localUrl;
   }
 
   if (isOnline) {
@@ -1165,32 +1191,8 @@ function updateRemoteModalUI(data) {
   } else {
     if (remoteActiveSection) remoteActiveSection.style.display = 'none';
     if (remoteInactiveSection) remoteInactiveSection.style.display = 'block';
-    fetch(`/api/system/qr?url=${encodeURIComponent(localUrl)}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.success && localModalQrImg) localModalQrImg.src = d.qr;
-      }).catch(() => {});
   }
 }
-
-async function openRemoteModal() {
-  if (remoteAccessModal) {
-    remoteAccessModal.classList.add('active');
-  }
-  try {
-    const res = await fetch('/api/system/tunnel');
-    const data = await res.json();
-    updateRemoteModalUI(data);
-  } catch (err) {
-    console.error('Error fetching tunnel status for modal:', err);
-  }
-}
-
-if (remoteModalBtn) remoteModalBtn.onclick = openRemoteModal;
-if (localIpBadge) localIpBadge.onclick = openRemoteModal;
-if (tunnelBadge) tunnelBadge.onclick = openRemoteModal;
-if (tunnelToggleBtn) tunnelToggleBtn.onclick = openRemoteModal;
-if (remoteCloseBtn) remoteCloseBtn.onclick = () => remoteAccessModal?.classList.remove('active');
 
 if (remoteSwitchCheckbox) {
   remoteSwitchCheckbox.onchange = async () => {
@@ -1223,43 +1225,45 @@ if (copyRemoteUrlBtn) {
   };
 }
 
-// Sidebar Admin Navigation Item Listeners
-if (sidebarConnectionsItem) {
-  sidebarConnectionsItem.onclick = () => {
-    openConnectionsModal();
-    closeMobileSidebar();
-  };
+// Settings Navigation Tabs
+function switchSettingsTab(tabName) {
+  document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.settings-tab-pane').forEach(pane => {
+    pane.style.display = 'none';
+  });
+
+  const tabId = 'pane' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
+  const targetPane = document.getElementById(tabId);
+  if (targetPane) targetPane.style.display = 'block';
+
+  if (tabName === 'general') updateLocalNetworkInfo();
+  if (tabName === 'remote') {
+    fetch('/api/system/tunnel')
+      .then(r => r.json())
+      .then(d => updateRemoteModalUI(d))
+      .catch(() => {});
+  }
+  if (tabName === 'connections') loadConnections();
+  if (tabName === 'guests') loadGuests();
 }
 
-if (sidebarGuestsItem) {
-  sidebarGuestsItem.onclick = () => {
-    openGuestsModal();
-    closeMobileSidebar();
-  };
-}
+document.querySelectorAll('.settings-tab-btn').forEach(btn => {
+  btn.onclick = () => switchSettingsTab(btn.dataset.tab);
+});
 
-if (sidebarRemoteItem) {
-  sidebarRemoteItem.onclick = () => {
-    openRemoteModal();
-    closeMobileSidebar();
-  };
-}
-
-if (sidebarSettingsItem) {
-  sidebarSettingsItem.onclick = () => {
-    settingsMsg.style.display = 'none';
+function openSettings(tab = 'general') {
+  if (settingsModal) {
     settingsModal.classList.add('active');
-    closeMobileSidebar();
-  };
+    switchSettingsTab(tab);
+  }
 }
 
+if (settingsBtn) settingsBtn.onclick = () => openSettings('general');
+if (tunnelBadge) tunnelBadge.onclick = () => openSettings('remote');
+if (settingsCloseBtn) settingsCloseBtn.onclick = () => settingsModal.classList.remove('active');
 
-// Settings / Change Admin Password
-settingsBtn.onclick = () => {
-  settingsMsg.style.display = 'none';
-  settingsModal.classList.add('active');
-};
-settingsCloseBtn.onclick = () => settingsModal.classList.remove('active');
 settingsCancelBtn.onclick = () => settingsModal.classList.remove('active');
 
 changePasswordForm.onsubmit = async (e) => {

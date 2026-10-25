@@ -5,7 +5,7 @@ import fs from 'fs';
 import multer from 'multer';
 import QRCode from 'qrcode';
 
-import { loadConfig } from './config.js';
+import { loadConfig, updateServerName } from './config.js';
 import {
   authMiddleware,
   requireAdmin,
@@ -65,6 +65,15 @@ export function createApp() {
   app.post('/api/auth/logout', handleLogout);
   app.get('/api/auth/status', handleAuthStatus);
   app.post('/api/auth/change-password', authMiddleware, handleChangePassword);
+  app.post('/api/settings/server-name', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const { name } = req.body;
+      const updated = updateServerName(name, cfg);
+      res.json({ success: true, serverName: updated });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
 
   // ---------------- CONNECTION & ACTIVITY TRACKING (Admin Only) ----------------
   app.get('/api/activity/connections', authMiddleware, requireAdmin, (req, res) => {

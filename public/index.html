@@ -32,13 +32,9 @@
         </div>
 
         <div class="network-badges">
-          <div id="localIpBadge" class="badge badge-green" title="Local Wi-Fi Network">
+          <div id="tunnelBadge" class="badge badge-purple" title="Click to Open Remote Access Settings">
             <span class="badge-dot"></span>
-            <span id="localIpText">LAN: ...</span>
-          </div>
-          <div id="tunnelBadge" class="badge badge-purple" title="Click to Toggle Remote Internet Access">
-            <span class="badge-dot"></span>
-            <span id="tunnelStatusText">Remote: ...</span>
+            <span id="tunnelStatusText">Internet: ...</span>
           </div>
         </div>
       </div>
@@ -52,29 +48,6 @@
       </div>
 
       <div class="header-right">
-        <!-- Live Connections Button (Admin Only) -->
-        <button id="connectionsBtn" class="btn btn-secondary btn-sm admin-only" title="Active Connections">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-          <span class="btn-label-desktop">Connected</span>
-          <span id="activeConnectionsBadge" class="count-pill">1</span>
-        </button>
-
-        <!-- Guest Users Button (Admin Only) -->
-        <button id="guestsBtn" class="btn btn-secondary btn-sm admin-only" title="Manage Guest Accounts">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <line x1="19" y1="8" x2="19" y2="14"></line>
-            <line x1="22" y1="11" x2="16" y2="11"></line>
-          </svg>
-          <span class="btn-label-desktop">Guests</span>
-        </button>
-
         <div id="batteryBadge" class="badge" title="MacBook Battery">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect width="16" height="10" x="2" y="7" rx="2" ry="2"></rect>
@@ -112,15 +85,7 @@
           <span class="btn-label-desktop">New File</span>
         </button>
 
-        <button id="remoteModalBtn" class="icon-btn-ghost admin-only" title="Remote Access & QR Code">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-          </svg>
-        </button>
-
-        <button id="settingsBtn" class="icon-btn-ghost admin-only" title="Server Security Settings">
+        <button id="settingsBtn" class="icon-btn-ghost admin-only" title="Settings & Administration">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
             <circle cx="12" cy="12" r="3"></circle>
@@ -153,57 +118,6 @@
             </nav>
           </div>
 
-          <!-- Admin Management Section in Sidebar (Guaranteed visibility on desktop/laptop) -->
-          <div class="sidebar-section admin-only">
-            <div class="sidebar-section-title">Admin Management</div>
-            <nav>
-              <div id="sidebarConnectionsItem" class="sidebar-nav-item">
-                <span class="nav-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                  </svg>
-                </span>
-                <span style="flex: 1;">Connected Clients</span>
-                <span id="sidebarConnBadge" class="count-pill">1</span>
-              </div>
-
-              <div id="sidebarGuestsItem" class="sidebar-nav-item">
-                <span class="nav-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <line x1="19" y1="8" x2="19" y2="14"></line>
-                    <line x1="22" y1="11" x2="16" y2="11"></line>
-                  </svg>
-                </span>
-                <span>Guest Users</span>
-              </div>
-
-              <div id="sidebarRemoteItem" class="sidebar-nav-item">
-                <span class="nav-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                  </svg>
-                </span>
-                <span>Remote Access</span>
-              </div>
-
-              <div id="sidebarSettingsItem" class="sidebar-nav-item">
-                <span class="nav-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
-                </span>
-                <span>Security Settings</span>
-              </div>
-            </nav>
-          </div>
         </div>
 
         <div class="sidebar-footer">
@@ -215,17 +129,6 @@
             <div class="progress-bar-bg">
               <div id="storageBarFill" class="progress-bar-fill" style="width: 0%;"></div>
             </div>
-          </div>
-
-          <div class="remote-tunnel-widget admin-only">
-            <button id="tunnelToggleBtn" class="btn btn-secondary btn-sm btn-block">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-              </svg>
-              <span>Remote Access Control</span>
-            </button>
           </div>
         </div>
       </aside>
@@ -372,181 +275,7 @@
     </div>
   </div>
 
-  <!-- DEDICATED REMOTE ACCESS & TUNNEL MODAL (ON/OFF TOGGLE) -->
-  <div id="remoteAccessModal" class="modal-overlay">
-    <div class="modal-window">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-          </svg>
-          <h3>Remote Internet Access Control</h3>
-        </div>
-        <button id="remoteCloseBtn" class="icon-btn-ghost" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body" style="padding: 20px;">
-        <!-- Big Toggle Card -->
-        <div class="toggle-control-card">
-          <div class="toggle-info">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <h4 style="font-size: 15px; font-weight: 600;">Remote Internet Tunnel</h4>
-              <span id="remoteStatusBadge" class="conn-net-badge local">Checking...</span>
-            </div>
-            <p id="remoteStatusExplanation" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-              Manage whether this server is accessible over the global internet.
-            </p>
-          </div>
 
-          <label class="switch-control admin-only">
-            <input type="checkbox" id="remoteSwitchCheckbox">
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <!-- Details when Remote is ON -->
-        <div id="remoteActiveSection" style="margin-top: 16px; display: none;">
-          <div class="qr-section">
-            <div style="font-size: 12px; font-weight: 600; color: var(--accent-green); margin-bottom: 6px;">
-              Public HTTPS Address:
-            </div>
-            <a id="remoteModalLink" href="#" target="_blank" class="url-text" style="font-size: 13px;">...</a>
-            <div style="margin-top: 8px;">
-              <button id="copyRemoteUrlBtn" class="btn btn-secondary btn-sm">Copy Link</button>
-            </div>
-            <img id="remoteModalQrImg" class="qr-img" style="margin-top: 12px;" alt="Remote QR Code" src="">
-            <p class="qr-hint">Scan with mobile phone to connect across cellular 4G/5G or remote Wi-Fi.</p>
-          </div>
-        </div>
-
-        <!-- Details when Remote is OFF (Local Only) -->
-        <div id="remoteInactiveSection" style="margin-top: 16px;">
-          <div class="qr-section" style="border-color: rgba(255, 214, 10, 0.3);">
-            <div style="font-size: 13px; font-weight: 600; color: var(--accent-yellow); margin-bottom: 6px;">
-              Server is strictly in Local Network Only Mode
-            </div>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-              External internet traffic cannot reach your MacBook. Only devices connected to your same local Wi-Fi / LAN can access.
-            </p>
-            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Local Network Address:</div>
-            <a id="localModalLink" href="#" target="_blank" class="url-text">...</a>
-            <img id="localModalQrImg" class="qr-img" style="margin-top: 10px;" alt="Local QR Code" src="">
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Active Connections Modal (Admin Only) -->
-  <div id="connectionsModal" class="modal-overlay">
-    <div class="modal-window modal-window-large">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-          </svg>
-          <h3>Connected Clients & Access Log</h3>
-        </div>
-        <button id="connectionsCloseBtn" class="icon-btn-ghost" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body" style="padding: 16px;">
-        <div class="tab-header">
-          <button id="tabActiveBtn" class="tab-btn active">Active Connections</button>
-          <button id="tabHistoryBtn" class="tab-btn">Recent Access History</button>
-        </div>
-
-        <div id="tabActiveContent">
-          <div id="activeConnectionsList" class="connections-list"></div>
-        </div>
-
-        <div id="tabHistoryContent" style="display: none;">
-          <div id="historyConnectionsList" class="connections-list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Guest User Management Modal (Admin Only) -->
-  <div id="guestsModal" class="modal-overlay">
-    <div class="modal-window modal-window-large">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <line x1="19" y1="8" x2="19" y2="14"></line>
-            <line x1="22" y1="11" x2="16" y2="11"></line>
-          </svg>
-          <h3>Guest Users Management</h3>
-        </div>
-        <button id="guestsCloseBtn" class="icon-btn-ghost" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body" style="padding: 18px;">
-        <div class="form-card">
-          <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Create Guest Account</h4>
-          <form id="createGuestForm">
-            <div class="grid-form">
-              <div class="input-group">
-                <label>Guest Username</label>
-                <input type="text" id="guestUsername" placeholder="e.g. friend, client" required autocomplete="off">
-              </div>
-              <div class="input-group">
-                <label>Guest Password</label>
-                <input type="password" id="guestPassword" placeholder="Minimum 4 characters" required minlength="4">
-              </div>
-            </div>
-
-            <div class="checkbox-group" style="margin: 12px 0;">
-              <label class="checkbox-label">
-                <input type="checkbox" id="permDownload" checked>
-                <span>Allow File Downloads</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="permWrite">
-                <span>Allow File Upload & Editing</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="permDelete">
-                <span>Allow Deleting Files</span>
-              </label>
-            </div>
-
-            <button type="submit" class="btn btn-primary btn-sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Add Guest User</span>
-            </button>
-          </form>
-        </div>
-
-        <div style="margin-top: 20px;">
-          <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Existing Guests</h4>
-          <div id="guestsList" class="guests-list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Code/Text Editor Modal -->
   <div id="editorModal" class="modal-overlay">
@@ -612,39 +341,248 @@
     </div>
   </div>
 
-  <!-- Settings / Change Admin Password Modal -->
+  <!-- Unified Settings & Administration Modal -->
   <div id="settingsModal" class="modal-overlay">
-    <div class="modal-window">
+    <div class="modal-window modal-window-large settings-window">
       <div class="modal-header">
-        <h3>Admin Security Settings</h3>
-        <button id="settingsCloseBtn" class="icon-btn-ghost" aria-label="Close">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="settings-header-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <div>
+            <h3 style="font-size: 15px; font-weight: 600;">Settings & Administration</h3>
+            <div id="settingsSubtitle" style="font-size: 11px; color: var(--text-secondary);">Server configuration, network, guests & security</div>
+          </div>
+        </div>
+        <button id="settingsCloseBtn" class="icon-btn-ghost" aria-label="Close Settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
       </div>
-      <form id="changePasswordForm">
-        <div class="modal-body">
-          <div class="input-group" style="margin-bottom: 14px;">
-            <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-              Current Admin Password
-            </label>
-            <input type="password" id="currentPassInput" placeholder="Default: mac1234">
+
+      <!-- Settings Navigation Tabs -->
+      <div class="settings-nav-tabs">
+        <button class="settings-tab-btn active" data-tab="general">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+          <span>General & LAN</span>
+        </button>
+
+        <button class="settings-tab-btn" data-tab="remote">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <span>Remote Access</span>
+        </button>
+
+        <button class="settings-tab-btn" data-tab="connections">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Connected</span>
+          <span id="settingsConnCount" class="count-pill">1</span>
+        </button>
+
+        <button class="settings-tab-btn" data-tab="guests">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+          <span>Guest Users</span>
+        </button>
+
+        <button class="settings-tab-btn" data-tab="security">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Security</span>
+        </button>
+      </div>
+
+      <div class="modal-body settings-body" style="padding: 18px 20px;">
+        <!-- Tab 1: General & LAN -->
+        <div id="paneGeneral" class="settings-tab-pane active">
+          <!-- Server Name Customization Card -->
+          <div class="settings-card">
+            <h4 class="settings-card-title">Server Identity</h4>
+            <p class="settings-card-desc">Set a custom name for your Mac server. It updates the header, browser title, and client identification.</p>
+            <form id="serverNameForm" style="display: flex; gap: 10px; margin-top: 12px; align-items: center;">
+              <input type="text" id="serverNameInput" placeholder="e.g. My Mac Cloud, Fatin's MacBook Server" required style="flex: 1;">
+              <button type="submit" class="btn btn-primary btn-sm" style="flex-shrink: 0;">Save Name</button>
+            </form>
           </div>
-          <div class="input-group" style="margin-bottom: 14px;">
-            <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-              New Admin Password
-            </label>
-            <input type="password" id="newPassInput" required minlength="4" placeholder="Minimum 4 characters">
+
+          <!-- Local LAN Address Card -->
+          <div class="settings-card" style="margin-top: 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <h4 class="settings-card-title">Local Network Access (LAN / Same Wi-Fi)</h4>
+              <span class="conn-net-badge local">Local LAN</span>
+            </div>
+            <p class="settings-card-desc">Use this address to access your MacBook from any phone, laptop, or tablet on your same local Wi-Fi.</p>
+            
+            <div class="url-display-box" style="margin: 12px 0;">
+              <a id="settingsLocalUrl" href="#" target="_blank" class="url-text">http://...</a>
+              <button id="copyLocalUrlBtn" class="btn btn-secondary btn-sm" type="button">Copy Link</button>
+            </div>
+
+            <div class="qr-preview-box">
+              <img id="settingsLocalQrImg" class="qr-img" alt="Local Wi-Fi QR Code" src="">
+              <div class="qr-preview-hint">Scan with mobile camera to connect over your local Wi-Fi.</div>
+            </div>
           </div>
-          <div id="settingsMsg" style="display: none; font-size: 13px; padding: 10px; border-radius: 8px;"></div>
         </div>
-        <div class="modal-footer">
-          <button type="button" id="settingsCancelBtn" class="btn btn-secondary">Cancel</button>
-          <button type="submit" class="btn btn-primary">Update Password</button>
+
+        <!-- Tab 2: Remote Access -->
+        <div id="paneRemote" class="settings-tab-pane" style="display: none;">
+          <div class="toggle-control-card">
+            <div class="toggle-info">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <h4 style="font-size: 15px; font-weight: 600;">Remote Internet Access</h4>
+                <span id="remoteStatusBadge" class="conn-net-badge local">Checking...</span>
+              </div>
+              <p id="remoteStatusExplanation" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                Enable or disable secure encrypted access from any cellular 4G/5G or external network in the world.
+              </p>
+            </div>
+
+            <label class="switch-control admin-only">
+              <input type="checkbox" id="remoteSwitchCheckbox">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Active Remote Details -->
+          <div id="remoteActiveSection" style="margin-top: 16px; display: none;">
+            <div class="qr-section">
+              <div style="font-size: 12px; font-weight: 600; color: var(--accent-green); margin-bottom: 6px;">
+                Encrypted Public HTTPS URL:
+              </div>
+              <div class="url-display-box" style="margin-bottom: 12px;">
+                <a id="remoteModalLink" href="#" target="_blank" class="url-text">...</a>
+                <button id="copyRemoteUrlBtn" class="btn btn-secondary btn-sm" type="button">Copy Link</button>
+              </div>
+              <img id="remoteModalQrImg" class="qr-img" alt="Remote QR Code" src="">
+              <p class="qr-hint">Scan with mobile phone to connect across cellular 4G/5G or remote Wi-Fi.</p>
+            </div>
+          </div>
+
+          <!-- Inactive Remote Details -->
+          <div id="remoteInactiveSection" style="margin-top: 16px;">
+            <div class="qr-section" style="border-color: rgba(255, 214, 10, 0.3);">
+              <div style="font-size: 13px; font-weight: 600; color: var(--accent-yellow); margin-bottom: 6px;">
+                Server is currently in Local Network Only Mode
+              </div>
+              <p style="font-size: 12px; color: var(--text-secondary);">
+                Remote tunnel is off. External internet traffic cannot reach your MacBook. Only devices connected to your same local Wi-Fi / LAN can access.
+              </p>
+            </div>
+          </div>
         </div>
-      </form>
+
+        <!-- Tab 3: Connected Clients -->
+        <div id="paneConnections" class="settings-tab-pane" style="display: none;">
+          <div class="tab-header" style="margin-bottom: 14px;">
+            <button id="tabActiveBtn" class="tab-btn active">Active Connections</button>
+            <button id="tabHistoryBtn" class="tab-btn">Recent Access History</button>
+          </div>
+
+          <div id="tabActiveContent">
+            <div id="activeConnectionsList" class="connections-list"></div>
+          </div>
+
+          <div id="tabHistoryContent" style="display: none;">
+            <div id="historyConnectionsList" class="connections-list"></div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Guest Users -->
+        <div id="paneGuests" class="settings-tab-pane" style="display: none;">
+          <div class="form-card">
+            <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Create Guest Account</h4>
+            <form id="createGuestForm">
+              <div class="grid-form">
+                <div class="input-group">
+                  <label>Guest Username</label>
+                  <input type="text" id="guestUsername" placeholder="e.g. friend, family, client" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                  <label>Guest Password</label>
+                  <input type="password" id="guestPassword" placeholder="Minimum 4 characters" required minlength="4">
+                </div>
+              </div>
+
+              <div class="checkbox-group" style="margin: 12px 0;">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="permDownload" checked>
+                  <span>Allow File Downloads</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="permWrite">
+                  <span>Allow File Upload & Editing</span>
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="permDelete">
+                  <span>Allow Deleting Files</span>
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add Guest User</span>
+              </button>
+            </form>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Existing Guests</h4>
+            <div id="guestsList" class="guests-list"></div>
+          </div>
+        </div>
+
+        <!-- Tab 5: Security / Master Password -->
+        <div id="paneSecurity" class="settings-tab-pane" style="display: none;">
+          <div class="settings-card">
+            <h4 class="settings-card-title">Change Master Admin Password</h4>
+            <p class="settings-card-desc">Update the master administrator password used to log in and manage this server.</p>
+            <form id="changePasswordForm" style="margin-top: 14px;">
+              <div class="input-group" style="margin-bottom: 14px;">
+                <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                  Current Admin Password
+                </label>
+                <input type="password" id="currentPassInput" placeholder="Default: mac1234">
+              </div>
+              <div class="input-group" style="margin-bottom: 14px;">
+                <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                  New Admin Password
+                </label>
+                <input type="password" id="newPassInput" required minlength="4" placeholder="Minimum 4 characters">
+              </div>
+              <div id="settingsMsg" style="display: none; font-size: 13px; padding: 10px; border-radius: 8px; margin-bottom: 14px;"></div>
+              <button type="submit" class="btn btn-primary">Update Master Password</button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
