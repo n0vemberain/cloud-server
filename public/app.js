@@ -46,14 +46,13 @@ const notifModal = document.getElementById('notifModal');
 const notifBtn = document.getElementById('notifBtn');
 const notifCloseBtn = document.getElementById('notifCloseBtn');
 const notifBadgeCount = document.getElementById('notifBadgeCount');
-const notifTabReqBtn = document.getElementById('notifTabReqBtn');
+const notifTabAllBtn = document.getElementById('notifTabAllBtn');
 const notifTabDownloadsBtn = document.getElementById('notifTabDownloadsBtn');
-const notifReqCountPill = document.getElementById('notifReqCountPill');
+const notifTabReqBtn = document.getElementById('notifTabReqBtn');
+const notifAllCountPill = document.getElementById('notifAllCountPill');
 const notifDownloadsCountPill = document.getElementById('notifDownloadsCountPill');
-const paneNotifRequests = document.getElementById('paneNotifRequests');
-const paneNotifDownloads = document.getElementById('paneNotifDownloads');
-const notifRequestsList = document.getElementById('notifRequestsList');
-const notifDownloadsList = document.getElementById('notifDownloadsList');
+const notifReqCountPill = document.getElementById('notifReqCountPill');
+const unifiedNotifList = document.getElementById('unifiedNotifList');
 const markAllNotifsReadBtn = document.getElementById('markAllNotifsReadBtn');
 
 // Dedicated Messages & Chat Modal Elements
@@ -321,6 +320,9 @@ async function checkAuth() {
     if (data.authenticated && data.user) {
       applyUserPermissions(data.user);
       return true;
+    } else {
+      window.location.href = '/login.html';
+      return false;
     }
   } catch (err) {
     console.error('Check auth error:', err);
@@ -1669,6 +1671,10 @@ createGuestForm.onsubmit = async (e) => {
 async function updateMetrics() {
   try {
     const res = await fetch('/api/system/metrics');
+    if (res.status === 401) {
+      window.location.href = '/login.html';
+      return;
+    }
     const data = await res.json();
     if (data.success) {
       const primaryNet = data.network[0];
@@ -2050,23 +2056,16 @@ searchInput.oninput = (e) => {
 };
 
 // Notifications Modal Management
-let activeNotifTab = 'requests';
+let activeNotifTab = 'all';
 
-function openNotifModal(tab = 'requests') {
+function openNotifModal(tab = 'all') {
   if (!notifModal) return;
   const isAdmin = currentUser?.role === 'admin';
   notifModal.classList.add('active');
 
   if (isAdmin) {
-    const pCount = parseInt(notifReqCountPill?.textContent || '0', 10);
-    const dCount = parseInt(notifDownloadsCountPill?.textContent || '0', 10);
-    if (tab === 'requests' && (!pCount || pCount === 0) && dCount > 0) {
-      tab = 'downloads';
-    }
-    switchNotifTab(tab || 'requests');
+    switchNotifTab(tab || 'all');
   } else {
-    if (paneNotifRequests) paneNotifRequests.style.display = 'block';
-    if (paneNotifDownloads) paneNotifDownloads.style.display = 'none';
     loadGuestNotifications();
   }
   updateNotificationsSummary();
@@ -2078,40 +2077,35 @@ function closeNotifModal() {
 
 function switchNotifTab(tab) {
   activeNotifTab = tab;
-  if (tab === 'requests') {
-    if (notifTabReqBtn) notifTabReqBtn.classList.add('active');
-    if (notifTabDownloadsBtn) notifTabDownloadsBtn.classList.remove('active');
-    if (paneNotifRequests) paneNotifRequests.style.display = 'block';
-    if (paneNotifDownloads) paneNotifDownloads.style.display = 'none';
-    loadPendingRequests();
-  } else {
-    if (notifTabReqBtn) notifTabReqBtn.classList.remove('active');
-    if (notifTabDownloadsBtn) notifTabDownloadsBtn.classList.add('active');
-    if (paneNotifRequests) paneNotifRequests.style.display = 'none';
-    if (paneNotifDownloads) paneNotifDownloads.style.display = 'block';
-    loadDownloadActivity();
-  }
+  if (notifTabAllBtn) notifTabAllBtn.classList.toggle('active', tab === 'all');
+  if (notifTabDownloadsBtn) notifTabDownloadsBtn.classList.toggle('active', tab === 'downloads');
+  if (notifTabReqBtn) notifTabReqBtn.classList.toggle('active', tab === 'requests');
+  loadAdminNotifications(tab);
 }
 
 async function loadGuestNotifications() {
-  if (!notifRequestsList) return;
+  if (!unifiedNotifList) return;
   try {
     const res = await fetch('/api/notifications/summary');
+    if (res.status === 401) {
+      window.location.href = '/login.html';
+      return;
+    }
     if (!res.ok) return;
     const data = await res.json();
     if (!data.success) return;
 
     const requests = data.requests || [];
-    notifRequestsList.innerHTML = '';
+    unifiedNotifList.innerHTML = '';
 
     if (requests.length === 0) {
-      notifRequestsList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 24px 12px; text-align: center; font-style: italic;">You have no notifications at this time.</div>';
+      unifiedNotifList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 32px 16px; text-align: center; font-style: italic;">You have no notifications at this time.</div>';
       return;
     }
 
     requests.forEach(req => {
       const card = document.createElement('div');
-      card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px;';
+      card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px;';
 
       let statusBadge = '';
       if (req.status === 'approved') {
@@ -2139,7 +2133,7 @@ async function loadGuestNotifications() {
           </div>
         </div>
       `;
-      notifRequestsList.appendChild(card);
+      unifiedNotifList.appendChild(card);
     });
 
     await fetch('/api/notifications/requests/read', { method: 'POST' });
@@ -2147,78 +2141,192 @@ async function loadGuestNotifications() {
   } catch (err) {}
 }
 
-async function loadDownloadActivity() {
+async function loadAdminNotifications(filter = 'all') {
   if (currentUser?.role !== 'admin') return;
-  if (!notifDownloadsList) return;
+  if (!unifiedNotifList) return;
   try {
-    const res = await fetch('/api/notifications/downloads');
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.success) return;
+    const [dlRes, reqRes] = await Promise.all([
+      fetch('/api/notifications/downloads'),
+      fetch('/api/requests/pending')
+    ]);
 
-    notifDownloadsList.innerHTML = '';
-    const downloads = data.downloads || [];
-
-    if (downloads.length === 0) {
-      notifDownloadsList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 24px 12px; text-align: center; font-style: italic;">No activity or download records yet.</div>';
+    if (dlRes.status === 401 || reqRes.status === 401) {
+      window.location.href = '/login.html';
       return;
     }
 
-    downloads.forEach(dl => {
-      const card = document.createElement('div');
-      card.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px; ${!dl.read ? 'border-left: 3px solid var(--accent-blue);' : ''}`;
+    const dlData = dlRes.ok ? await dlRes.json() : { downloads: [] };
+    const reqData = reqRes.ok ? await reqRes.json() : { pending: [] };
 
-      const isAccountActivity = dl.type === 'guest_password_changed' || dl.type === 'account_activity';
-      const userDisplay = dl.name ? `${escapeHtml(dl.name)} (@${escapeHtml(dl.username || 'user')})` : `@${escapeHtml(dl.username || 'user')}`;
-      const roleBadge = dl.role === 'admin'
-        ? '<span class="role-badge admin" style="font-size: 10px;">Admin</span>'
-        : '<span class="role-badge guest" style="font-size: 10px;">Guest</span>';
+    const downloads = (dlData.downloads || []).map(dl => ({
+      kind: 'download',
+      item: dl,
+      timestamp: new Date(dl.timestamp || dl.downloadedAt || Date.now()).getTime()
+    }));
 
-      if (isAccountActivity) {
+    const requests = (reqData.pending || []).map(req => ({
+      kind: 'request',
+      item: req,
+      timestamp: new Date(req.createdAt || Date.now()).getTime()
+    }));
+
+    let combined = [];
+    if (filter === 'downloads') {
+      combined = downloads;
+    } else if (filter === 'requests') {
+      combined = requests;
+    } else {
+      combined = [...requests, ...downloads];
+    }
+
+    combined.sort((a, b) => b.timestamp - a.timestamp);
+
+    unifiedNotifList.innerHTML = '';
+
+    if (combined.length === 0) {
+      let emptyMsg = 'No notifications or activity recorded yet.';
+      if (filter === 'downloads') emptyMsg = 'No download records yet.';
+      if (filter === 'requests') emptyMsg = 'No pending permission requests.';
+      unifiedNotifList.innerHTML = `<div style="color: var(--text-muted); font-size: 12px; padding: 32px 16px; text-align: center; font-style: italic;">${emptyMsg}</div>`;
+      return;
+    }
+
+    combined.forEach(entry => {
+      if (entry.kind === 'request') {
+        const req = entry.item;
+        const card = document.createElement('div');
+        card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); border-left: 3px solid var(--accent-orange); gap: 12px;';
+
+        const senderDisplay = req.name ? `${escapeHtml(req.name)} (@${escapeHtml(req.username)})` : `@${escapeHtml(req.username)}`;
+
         card.innerHTML = `
           <div style="min-width: 0; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
-              ${roleBadge}
-              <span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Password Changed</span>
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;">
+              <span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3); font-size: 10px;">Permission Request</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${senderDisplay}</span>
             </div>
-            <div style="font-size: 12px; color: var(--text-primary); margin-top: 3px;">
-              ${escapeHtml(dl.actionText || 'Guest updated their account password.')}
+            <div style="font-size: 12px; color: var(--text-primary);">
+              Requested access: <strong style="color: var(--accent-blue);">${escapeHtml(req.permissionLabel)}</strong>
             </div>
-            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-              ${formatDate(dl.timestamp || dl.downloadedAt)}
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 3px;">
+              ${formatDate(req.createdAt)}
             </div>
           </div>
+          <div style="display: flex; gap: 8px; flex-shrink: 0;">
+            <button class="btn btn-primary btn-sm notif-approve-btn" style="background: var(--accent-green); border-color: var(--accent-green); padding: 4px 10px; font-size: 11px;">Approve</button>
+            <button class="btn btn-secondary btn-sm notif-decline-btn" style="padding: 4px 10px; font-size: 11px;">Decline</button>
+          </div>
         `;
-      } else {
-        const typeLabel = dl.isDirectory ? 'Downloaded Folder (ZIP)' : 'Downloaded File';
-        const sizeStr = formatBytes(dl.fileSize || 0);
 
-        card.innerHTML = `
-          <div style="min-width: 0; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
-              ${roleBadge}
-              <span style="font-size: 11px; color: var(--text-secondary);">&bull; ${typeLabel}</span>
+        card.querySelector('.notif-approve-btn').onclick = async () => {
+          try {
+            const ares = await fetch('/api/requests/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: req.id })
+            });
+            const adata = await ares.json();
+            if (adata.success) {
+              showToast(`Approved "${req.permissionLabel}" for ${senderDisplay}`);
+              loadAdminNotifications(activeNotifTab);
+              loadPendingRequests();
+              loadGuests();
+              updateNotificationsSummary();
+            } else {
+              showToast(adata.error || 'Failed to approve');
+            }
+          } catch (e) {
+            showToast(e.message);
+          }
+        };
+
+        card.querySelector('.notif-decline-btn').onclick = async () => {
+          try {
+            const dres = await fetch('/api/requests/decline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: req.id })
+            });
+            const ddata = await dres.json();
+            if (ddata.success) {
+              showToast(`Declined request from ${senderDisplay}`);
+              loadAdminNotifications(activeNotifTab);
+              loadPendingRequests();
+              updateNotificationsSummary();
+            } else {
+              showToast(ddata.error || 'Failed to decline');
+            }
+          } catch (e) {
+            showToast(e.message);
+          }
+        };
+
+        unifiedNotifList.appendChild(card);
+      } else if (entry.kind === 'download') {
+        const dl = entry.item;
+        const card = document.createElement('div');
+        const isUnread = !dl.read;
+        card.style.cssText = `display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); ${isUnread ? 'border-left: 3px solid var(--accent-blue);' : ''} gap: 12px;`;
+
+        const isAccountActivity = dl.type === 'guest_password_changed' || dl.type === 'account_activity';
+        const userDisplay = dl.name ? `${escapeHtml(dl.name)} (@${escapeHtml(dl.username || 'user')})` : `@${escapeHtml(dl.username || 'user')}`;
+        const roleBadge = dl.role === 'admin'
+          ? '<span class="role-badge admin" style="font-size: 10px;">Admin</span>'
+          : '<span class="role-badge guest" style="font-size: 10px;">Guest</span>';
+
+        if (isAccountActivity) {
+          card.innerHTML = `
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
+                <span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Security</span>
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
+                ${roleBadge}
+              </div>
+              <div style="font-size: 12px; color: var(--text-primary); margin-top: 2px;">
+                ${escapeHtml(dl.actionText || 'Guest updated their account password.')}
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+                ${formatDate(dl.timestamp || dl.downloadedAt)}
+              </div>
             </div>
-            <div style="font-size: 12px; color: var(--accent-blue); font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px;" title="${escapeHtml(dl.filePath || '')}">
-              ${escapeHtml(dl.fileName || dl.filePath || 'File')}
+          `;
+        } else {
+          const typeLabel = dl.isDirectory ? 'Folder (ZIP)' : 'File';
+          const sizeStr = formatBytes(dl.fileSize || 0);
+          const fileName = dl.fileName || (dl.filePath ? dl.filePath.split(/[/\\]/).filter(Boolean).pop() : 'Download');
+
+          card.innerHTML = `
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
+                <span class="conn-net-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue); font-size: 10px; border-color: rgba(10, 132, 255, 0.3);">${typeLabel} Downloaded</span>
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
+                ${roleBadge}
+              </div>
+              <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); font-family: monospace; word-break: break-all; margin-top: 4px;" title="${escapeHtml(dl.filePath || '')}">
+                ${escapeHtml(fileName)}
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
+                <span><strong>Size:</strong> ${sizeStr}</span>
+                <span>&bull;</span>
+                <span><strong>Time:</strong> ${formatDate(dl.timestamp || dl.downloadedAt)}</span>
+                ${dl.filePath ? `<span>&bull;</span><span style="word-break: break-all;"><strong>Path:</strong> ${escapeHtml(dl.filePath)}</span>` : ''}
+              </div>
             </div>
-            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-              Size: ${sizeStr} &bull; ${formatDate(dl.timestamp || dl.downloadedAt)}
-            </div>
-          </div>
-        `;
+          `;
+        }
+        unifiedNotifList.appendChild(card);
       }
-      notifDownloadsList.appendChild(card);
     });
-  } catch (err) {}
+  } catch (err) {
+    console.error('loadAdminNotifications error:', err);
+  }
 }
 
-if (notifBtn) notifBtn.onclick = () => openNotifModal('requests');
+if (notifBtn) notifBtn.onclick = () => openNotifModal('all');
 if (notifCloseBtn) notifCloseBtn.onclick = closeNotifModal;
-if (notifTabReqBtn) notifTabReqBtn.onclick = () => switchNotifTab('requests');
+if (notifTabAllBtn) notifTabAllBtn.onclick = () => switchNotifTab('all');
 if (notifTabDownloadsBtn) notifTabDownloadsBtn.onclick = () => switchNotifTab('downloads');
+if (notifTabReqBtn) notifTabReqBtn.onclick = () => switchNotifTab('requests');
 if (markAllNotifsReadBtn) {
   markAllNotifsReadBtn.onclick = async () => {
     try {
@@ -2229,7 +2337,7 @@ if (markAllNotifsReadBtn) {
           body: JSON.stringify({})
         });
         showToast('All activity notifications marked as read');
-        loadDownloadActivity();
+        loadAdminNotifications(activeNotifTab);
         updateNotificationsSummary();
       } else {
         await fetch('/api/notifications/requests/read', { method: 'POST' });
@@ -2269,6 +2377,10 @@ if (messagesCloseBtn) messagesCloseBtn.onclick = closeMessagesModal;
 async function updateNotificationsSummary() {
   try {
     const res = await fetch('/api/notifications/summary');
+    if (res.status === 401) {
+      window.location.href = '/login.html';
+      return;
+    }
     if (!res.ok) return;
     const data = await res.json();
     if (!data.success) return;
@@ -2292,6 +2404,15 @@ async function updateNotificationsSummary() {
         messagesBadgeCount.style.display = 'inline-flex';
       } else {
         messagesBadgeCount.style.display = 'none';
+      }
+    }
+
+    if (notifAllCountPill) {
+      if (notifCount > 0) {
+        notifAllCountPill.textContent = notifCount;
+        notifAllCountPill.style.display = 'inline-flex';
+      } else {
+        notifAllCountPill.style.display = 'none';
       }
     }
 
@@ -2619,12 +2740,9 @@ async function init() {
   setInterval(() => {
     if (notifModal && notifModal.classList.contains('active')) {
       if (currentUser?.role === 'admin') {
-        if (paneNotifRequests && paneNotifRequests.style.display !== 'none') {
-          loadPendingRequests();
-        }
-        if (paneNotifDownloads && paneNotifDownloads.style.display !== 'none') {
-          loadDownloadActivity();
-        }
+        loadAdminNotifications(activeNotifTab);
+      } else {
+        loadGuestNotifications();
       }
     }
     if (messagesModal && messagesModal.classList.contains('active')) {

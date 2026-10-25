@@ -963,15 +963,16 @@
         </div>
       </div>
 
-      <!-- Admin Tabs: Permission Requests / Download Activity -->
+      <!-- Admin Filter Tabs -->
       <div id="adminNotifTabs" class="admin-only">
         <div class="settings-nav-tabs" style="padding: 0 20px;">
-          <button class="settings-tab-btn active" id="notifTabReqBtn" type="button">
+          <button class="settings-tab-btn active" id="notifTabAllBtn" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
             </svg>
-            <span>Permission Requests</span>
-            <span id="notifReqCountPill" class="count-pill" style="display: none; background: var(--accent-orange); color: white;">0</span>
+            <span>All Activity</span>
+            <span id="notifAllCountPill" class="count-pill" style="display: none; background: var(--accent-blue); color: white;">0</span>
           </button>
           <button class="settings-tab-btn" id="notifTabDownloadsBtn" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -979,22 +980,22 @@
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            <span>Activity & Downloads</span>
+            <span>Downloads</span>
             <span id="notifDownloadsCountPill" class="count-pill" style="display: none; background: var(--accent-blue); color: white;">0</span>
+          </button>
+          <button class="settings-tab-btn" id="notifTabReqBtn" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Requests</span>
+            <span id="notifReqCountPill" class="count-pill" style="display: none; background: var(--accent-orange); color: white;">0</span>
           </button>
         </div>
       </div>
 
       <div class="modal-body" style="padding: 16px 20px; max-height: 520px; overflow-y: auto;">
-        <!-- Pane 1: Permission Requests -->
-        <div id="paneNotifRequests">
-          <div id="notifRequestsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
-        </div>
-
-        <!-- Pane 2: Download & Account Activity (Admin only) -->
-        <div id="paneNotifDownloads" class="admin-only" style="display: none;">
-          <div id="notifDownloadsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
-        </div>
+        <!-- Unified Notifications List -->
+        <div id="unifiedNotifList" style="display: flex; flex-direction: column; gap: 10px;"></div>
       </div>
     </div>
   </div>

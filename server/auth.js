@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { loadConfig, updatePassword } from './config.js';
 import { authenticateUser, loadGuests } from './userManager.js';
-import { recordSession, updateSessionActivity, revokeSession } from './sessionTracker.js';
+import { recordSession, updateSessionActivity, revokeSession, isSessionRevoked } from './sessionTracker.js';
 
 const failedAttempts = new Map();
 
@@ -80,6 +80,14 @@ export function authMiddleware(req, res, next) {
 
   const payload = verifyToken(token, cfg);
   if (payload) {
+    if (payload.sessionId && isSessionRevoked(payload.sessionId)) {
+      res.clearCookie('mac_token');
+      if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ success: false, error: 'Session was disconnected by administrator. Please log in again.' });
+      }
+      return res.redirect('/login.html');
+    }
+
     if (payload.role === 'guest') {
       const guests = loadGuests();
       const currentGuest = guests.find(g => g.username.toLowerCase() === payload.username.toLowerCase());
@@ -195,6 +203,16 @@ export function handleAuthStatus(req, res) {
   const cfg = loadConfig();
   const token = req.cookies?.mac_token || req.headers.authorization?.replace('Bearer ', '');
   const payload = verifyToken(token, cfg);
+  if (payload && payload.sessionId && isSessionRevoked(payload.sessionId)) {
+    res.clearCookie('mac_token');
+    return res.status(401).json({
+      authenticated: false,
+      user: null,
+      isConfigured: cfg.isConfigured,
+      serverName: cfg.serverName,
+      error: 'Session was disconnected by administrator.'
+    });
+  }
   if (payload && payload.role === 'guest') {
     const guests = loadGuests();
     const currentGuest = guests.find(g => g.username.toLowerCase() === payload.username.toLowerCase());

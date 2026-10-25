@@ -1,14 +1,56 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../data');
 const SESSIONS_FILE = path.join(DATA_DIR, 'sessions.json');
+const REVOKED_FILE = path.join(DATA_DIR, 'revoked_sessions.json');
 
 // In-memory active sessions map: sessionId -> session object
 const activeSessions = new Map();
 let sessionHistory = [];
+let revokedSessions = new Set();
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+function loadRevokedSessions() {
+  ensureDataDir();
+  if (fs.existsSync(REVOKED_FILE)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(REVOKED_FILE, 'utf-8'));
+      if (Array.isArray(data)) {
+        revokedSessions = new Set(data);
+      }
+    } catch (e) {
+      revokedSessions = new Set();
+    }
+  }
+}
+
+function saveRevokedSessions() {
+  ensureDataDir();
+  try {
+    const arr = Array.from(revokedSessions);
+    const toSave = arr.slice(-500);
+    const content = JSON.stringify(toSave, null, 2);
+    const tmp = REVOKED_FILE + '.tmp';
+    const bak = REVOKED_FILE + '.bak';
+    fs.writeFileSync(tmp, content, 'utf-8');
+    fs.renameSync(tmp, REVOKED_FILE);
+    fs.writeFileSync(bak, content, 'utf-8');
+  } catch (e) {
+    console.error('Error saving revoked sessions:', e);
+  }
+}
 
 function loadHistory() {
+  ensureDataDir();
   if (fs.existsSync(SESSIONS_FILE)) {
     try {
       const data = JSON.parse(fs.readFileSync(SESSIONS_FILE, 'utf-8'));
@@ -20,18 +62,25 @@ function loadHistory() {
 }
 
 function saveHistory() {
+  ensureDataDir();
   try {
     // Keep last 100 history entries
     if (sessionHistory.length > 100) {
       sessionHistory = sessionHistory.slice(0, 100);
     }
-    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessionHistory, null, 2), 'utf-8');
+    const content = JSON.stringify(sessionHistory, null, 2);
+    const tmp = SESSIONS_FILE + '.tmp';
+    const bak = SESSIONS_FILE + '.bak';
+    fs.writeFileSync(tmp, content, 'utf-8');
+    fs.renameSync(tmp, SESSIONS_FILE);
+    fs.writeFileSync(bak, content, 'utf-8');
   } catch (e) {
     console.error('Error saving session history:', e);
   }
 }
 
 loadHistory();
+loadRevokedSessions();
 
 export function parseDevice(userAgent = '') {
   const ua = userAgent.toLowerCase();
@@ -127,7 +176,7 @@ export function recordSession(sessionId, username, role, req) {
 }
 
 export function updateSessionActivity(sessionId, req, username, role) {
-  if (!sessionId) return;
+  if (!sessionId || isSessionRevoked(sessionId)) return;
   let session = activeSessions.get(sessionId);
   if (!session) {
     const ip = getClientIp(req);
@@ -168,19 +217,21 @@ export function updateSessionActivity(sessionId, req, username, role) {
 }
 
 export function revokeSession(sessionId) {
+  if (!sessionId) return false;
+  revokedSessions.add(sessionId);
+  saveRevokedSessions();
+
   if (activeSessions.has(sessionId)) {
     const s = activeSessions.get(sessionId);
     s.revoked = true;
     activeSessions.delete(sessionId);
-    return true;
   }
-  return false;
+  return true;
 }
 
 export function isSessionRevoked(sessionId) {
   if (!sessionId) return false;
-  // If not in active sessions map, it might be revoked or server restarted
-  return false;
+  return revokedSessions.has(sessionId);
 }
 
 export function getActiveSessions() {
