@@ -4,12 +4,8 @@ import os from 'os';
 import mime from 'mime-types';
 
 export function getAllowedGuestPaths(user) {
-  const home = os.homedir();
   const fa = user?.permissions?.folderAccess || {};
   const allowed = [];
-  if (fa.desktop) allowed.push(path.resolve(path.join(home, 'Desktop')));
-  if (fa.documents) allowed.push(path.resolve(path.join(home, 'Documents')));
-  if (fa.downloads) allowed.push(path.resolve(path.join(home, 'Downloads')));
 
   if (Array.isArray(fa.customFolders)) {
     for (const item of fa.customFolders) {
@@ -39,19 +35,10 @@ export function getBookmarks(user = null) {
   const home = os.homedir();
   const isWin = process.platform === 'win32';
 
-  // For Guests: only include Desktop, Documents, Downloads and custom folders granted by admin
+  // For Guests: only include custom folders explicitly granted by admin
   if (user && user.role === 'guest') {
     const fa = user.permissions?.folderAccess || {};
     const guestBookmarks = [];
-    if (fa.desktop) {
-      guestBookmarks.push({ name: 'Desktop', path: path.join(home, 'Desktop'), icon: 'desktop' });
-    }
-    if (fa.documents) {
-      guestBookmarks.push({ name: 'Documents', path: path.join(home, 'Documents'), icon: 'document' });
-    }
-    if (fa.downloads) {
-      guestBookmarks.push({ name: 'Downloads', path: path.join(home, 'Downloads'), icon: 'download' });
-    }
     if (Array.isArray(fa.customFolders)) {
       for (const item of fa.customFolders) {
         const rawPath = typeof item === 'string' ? item : item?.path;

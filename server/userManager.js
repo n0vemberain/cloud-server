@@ -168,9 +168,6 @@ export function getGuests() {
       canDelete: g.permissions?.canDelete ?? false,
       canDownload: g.permissions?.canDownload ?? true,
       folderAccess: {
-        desktop: g.permissions?.folderAccess?.desktop ?? false,
-        documents: g.permissions?.folderAccess?.documents ?? false,
-        downloads: g.permissions?.folderAccess?.downloads ?? true,
         customFolders: Array.isArray(g.permissions?.folderAccess?.customFolders)
           ? g.permissions.folderAccess.customFolders
           : []
@@ -199,9 +196,6 @@ export function createGuest(name, username, password, permissions = {}) {
   const hash = hashPassword(password, salt);
 
   const folderAccess = {
-    desktop: Boolean(permissions.folderAccess?.desktop),
-    documents: Boolean(permissions.folderAccess?.documents),
-    downloads: permissions.folderAccess ? Boolean(permissions.folderAccess.downloads) : true,
     customFolders: sanitizeCustomFolders(permissions.folderAccess?.customFolders)
   };
 
@@ -268,15 +262,12 @@ export function updateGuest(id, updates = {}) {
   }
 
   if (updates.permissions) {
-    const curFolder = guest.permissions?.folderAccess || { desktop: false, documents: false, downloads: true, customFolders: [] };
+    const curFolder = guest.permissions?.folderAccess || { customFolders: [] };
     const newFA = updates.permissions.folderAccess;
     guest.permissions = {
       ...guest.permissions,
       ...updates.permissions,
       folderAccess: newFA ? {
-        desktop: Boolean(newFA.desktop),
-        documents: Boolean(newFA.documents),
-        downloads: Boolean(newFA.downloads),
         customFolders: newFA.customFolders !== undefined
           ? sanitizeCustomFolders(newFA.customFolders)
           : (curFolder.customFolders || [])
@@ -354,9 +345,6 @@ export function authenticateUser(username, password, adminConfig) {
           canDelete: guest.permissions?.canDelete ?? false,
           canDownload: guest.permissions?.canDownload ?? true,
           folderAccess: {
-            desktop: guest.permissions?.folderAccess?.desktop ?? false,
-            documents: guest.permissions?.folderAccess?.documents ?? false,
-            downloads: guest.permissions?.folderAccess?.downloads ?? true,
             customFolders: Array.isArray(guest.permissions?.folderAccess?.customFolders)
               ? guest.permissions.folderAccess.customFolders
               : []

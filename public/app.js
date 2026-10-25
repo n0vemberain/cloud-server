@@ -41,13 +41,11 @@ const storageBarFill = document.getElementById('storageBarFill');
 const folderStatsPill = document.getElementById('folderStatsPill');
 const copyCurrentPathBtn = document.getElementById('copyCurrentPathBtn');
 
-// Notifications & Messages Modal Elements
+// Notifications & Chat Modal Elements
 const notifModal = document.getElementById('notifModal');
 const notifBtn = document.getElementById('notifBtn');
 const notifCloseBtn = document.getElementById('notifCloseBtn');
 const notifBadgeCount = document.getElementById('notifBadgeCount');
-const adminNotifSection = document.getElementById('adminNotifSection');
-const guestNotifSection = document.getElementById('guestNotifSection');
 const notifTabReqBtn = document.getElementById('notifTabReqBtn');
 const notifTabMsgBtn = document.getElementById('notifTabMsgBtn');
 const notifReqCountPill = document.getElementById('notifReqCountPill');
@@ -55,11 +53,12 @@ const notifMsgCountPill = document.getElementById('notifMsgCountPill');
 const paneNotifRequests = document.getElementById('paneNotifRequests');
 const paneNotifMessages = document.getElementById('paneNotifMessages');
 const notifRequestsList = document.getElementById('notifRequestsList');
-const notifMessagesList = document.getElementById('notifMessagesList');
 const markAllReadBtn = document.getElementById('markAllReadBtn');
-const guestSendMessageForm = document.getElementById('guestSendMessageForm');
-const guestMessageInput = document.getElementById('guestMessageInput');
-const guestMyMessagesList = document.getElementById('guestMyMessagesList');
+const chatConversationFilter = document.getElementById('chatConversationFilter');
+const chatMessagesList = document.getElementById('chatMessagesList');
+const chatSendMessageForm = document.getElementById('chatSendMessageForm');
+const chatRecipientSelect = document.getElementById('chatRecipientSelect');
+const chatMessageInput = document.getElementById('chatMessageInput');
 
 // Unified Settings Modal Elements
 const settingsModal = document.getElementById('settingsModal');
@@ -1024,12 +1023,15 @@ async function loadGuests() {
       card.className = 'guest-card';
 
       const allowedFolders = [];
-      if (g.permissions?.folderAccess?.desktop) allowedFolders.push('Desktop');
-      if (g.permissions?.folderAccess?.documents) allowedFolders.push('Documents');
-      if (g.permissions?.folderAccess?.downloads) allowedFolders.push('Downloads');
       if (Array.isArray(g.permissions?.folderAccess?.customFolders)) {
         g.permissions.folderAccess.customFolders.forEach(cf => {
-          if (cf && cf.name) allowedFolders.push(cf.name);
+          if (!cf) return;
+          let name = cf.name;
+          if (!name && cf.path) {
+            const parts = cf.path.replace(/\\/g, '/').split('/').filter(Boolean);
+            name = parts.length > 0 ? parts[parts.length - 1] : cf.path;
+          }
+          if (name) allowedFolders.push(name);
         });
       }
       const foldersText = allowedFolders.length > 0 ? allowedFolders.join(', ') : 'None';
@@ -1042,7 +1044,8 @@ async function loadGuests() {
 
       const isAdmin = currentUser?.role === 'admin';
       const adminActions = isAdmin ? `
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm msg-guest-btn">Message</button>
           <button class="btn btn-secondary btn-sm edit-guest-btn">Edit</button>
           <button class="btn btn-danger btn-sm del-guest-btn">Delete</button>
         </div>
@@ -1089,6 +1092,21 @@ async function loadGuests() {
           }).catch(() => {
             showToast(`Password: ${g.password}`);
           });
+        };
+      }
+
+      const msgGuestBtn = card.querySelector('.msg-guest-btn');
+      if (msgGuestBtn) {
+        msgGuestBtn.onclick = () => {
+          if (settingsModal) settingsModal.classList.remove('active');
+          openNotifModal('messages');
+          setTimeout(() => {
+            if (chatRecipientSelect) chatRecipientSelect.value = g.id;
+            if (chatMessageInput) {
+              chatMessageInput.focus();
+              chatMessageInput.placeholder = `Message to @${g.username}...`;
+            }
+          }, 100);
         };
       }
 
@@ -1272,9 +1290,6 @@ function openEditGuestModal(guest) {
   document.getElementById('editGuestName').value = guest.name || guest.username;
   document.getElementById('editGuestUsername').value = guest.username;
   document.getElementById('editGuestPassword').value = '';
-  document.getElementById('editFolderDesktop').checked = Boolean(guest.permissions?.folderAccess?.desktop);
-  document.getElementById('editFolderDocuments').checked = Boolean(guest.permissions?.folderAccess?.documents);
-  document.getElementById('editFolderDownloads').checked = Boolean(guest.permissions?.folderAccess?.downloads);
   document.getElementById('editPermDownload').checked = Boolean(guest.permissions?.canDownload);
   document.getElementById('editPermWrite').checked = Boolean(guest.permissions?.canWrite);
   document.getElementById('editPermDelete').checked = Boolean(guest.permissions?.canDelete);
@@ -1309,9 +1324,6 @@ if (editGuestForm) {
     const canWrite = document.getElementById('editPermWrite').checked;
     const canDelete = document.getElementById('editPermDelete').checked;
     const folderAccess = {
-      desktop: document.getElementById('editFolderDesktop').checked,
-      documents: document.getElementById('editFolderDocuments').checked,
-      downloads: document.getElementById('editFolderDownloads').checked,
       customFolders: editCustomFolders
     };
 
@@ -1471,12 +1483,15 @@ async function loadGuestPermissions() {
   if (guestAllowedFoldersBadges) {
     const fa = currentUser?.permissions?.folderAccess || {};
     const allowed = [];
-    if (fa.desktop) allowed.push('Desktop');
-    if (fa.documents) allowed.push('Documents');
-    if (fa.downloads) allowed.push('Downloads');
     if (Array.isArray(fa.customFolders)) {
       fa.customFolders.forEach(cf => {
-        if (cf && cf.name) allowed.push(cf.name);
+        if (!cf) return;
+        let name = cf.name;
+        if (!name && cf.path) {
+          const parts = cf.path.replace(/\\/g, '/').split('/').filter(Boolean);
+          name = parts.length > 0 ? parts[parts.length - 1] : cf.path;
+        }
+        if (name) allowed.push(name);
       });
     }
 
@@ -1557,9 +1572,6 @@ createGuestForm.onsubmit = async (e) => {
   const canWrite = document.getElementById('permWrite').checked;
   const canDelete = document.getElementById('permDelete').checked;
   const folderAccess = {
-    desktop: document.getElementById('folderDesktop').checked,
-    documents: document.getElementById('folderDocuments').checked,
-    downloads: document.getElementById('folderDownloads').checked,
     customFolders: createCustomFolders
   };
 
@@ -1585,7 +1597,6 @@ createGuestForm.onsubmit = async (e) => {
       createGuestForm.reset();
       createCustomFolders = [];
       renderCreateCustomFolders();
-      document.getElementById('folderDownloads').checked = true;
       document.getElementById('permDownload').checked = true;
       loadGuests();
     } else {
@@ -1913,21 +1924,27 @@ searchInput.oninput = (e) => {
 
 // Notifications & Messages Modal Management
 let activeNotifTab = 'requests';
+let cachedChatMessages = [];
 
 function openNotifModal(tab = 'requests') {
   if (!notifModal) return;
   const isAdmin = currentUser?.role === 'admin';
-  if (adminNotifSection) adminNotifSection.style.display = isAdmin ? 'block' : 'none';
-  if (guestNotifSection) guestNotifSection.style.display = !isAdmin ? 'block' : 'none';
+  const modalTitle = document.getElementById('notifModalTitle');
+  const modalSubtitle = document.getElementById('notifModalSubtitle');
 
   notifModal.classList.add('active');
 
   if (isAdmin) {
-    switchNotifTab(tab);
-    loadPendingRequests();
-    loadAdminMessages();
+    if (modalTitle) modalTitle.textContent = 'Notifications & Messages';
+    if (modalSubtitle) modalSubtitle.textContent = 'Permission requests and multi-user chat';
+    switchNotifTab(tab || 'requests');
   } else {
-    loadGuestMessages();
+    if (modalTitle) modalTitle.textContent = 'Messages & Chat';
+    if (modalSubtitle) modalSubtitle.textContent = 'Chat with administrator and connected users';
+    if (paneNotifRequests) paneNotifRequests.style.display = 'none';
+    if (paneNotifMessages) paneNotifMessages.style.display = 'block';
+    loadChatRecipients();
+    loadChatMessages();
   }
   updateNotificationsSummary();
 }
@@ -1949,7 +1966,8 @@ function switchNotifTab(tab) {
     if (notifTabMsgBtn) notifTabMsgBtn.classList.add('active');
     if (paneNotifRequests) paneNotifRequests.style.display = 'none';
     if (paneNotifMessages) paneNotifMessages.style.display = 'block';
-    loadAdminMessages();
+    loadChatRecipients();
+    loadChatMessages();
   }
 }
 
@@ -1997,82 +2015,179 @@ async function updateNotificationsSummary() {
   } catch (err) {}
 }
 
-async function loadAdminMessages() {
-  if (currentUser?.role !== 'admin') return;
-  if (!notifMessagesList) return;
+async function loadChatRecipients() {
+  if (!chatRecipientSelect) return;
   try {
-    const res = await fetch('/api/messages/all');
+    const res = await fetch('/api/messages/recipients');
     if (!res.ok) return;
     const data = await res.json();
     if (!data.success) return;
 
-    const msgs = data.messages || [];
-    notifMessagesList.innerHTML = '';
+    const currentVal = chatRecipientSelect.value;
+    chatRecipientSelect.innerHTML = '<option value="all">Everyone (Public Server Chat)</option>';
 
-    if (msgs.length === 0) {
-      notifMessagesList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 12px 0; text-align: center;">No messages from guests yet.</div>';
-      return;
+    (data.recipients || []).forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.textContent = r.label || (r.name ? `${r.name} (@${r.username})` : `@${r.username}`);
+      chatRecipientSelect.appendChild(opt);
+    });
+
+    if (currentVal && Array.from(chatRecipientSelect.options).some(o => o.value === currentVal)) {
+      chatRecipientSelect.value = currentVal;
+    }
+  } catch (err) {}
+}
+
+async function loadChatMessages() {
+  if (!chatMessagesList) return;
+  try {
+    const res = await fetch('/api/messages');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    cachedChatMessages = data.messages || [];
+    renderChatMessages();
+  } catch (err) {}
+}
+
+function renderChatMessages() {
+  if (!chatMessagesList) return;
+  const filter = chatConversationFilter ? chatConversationFilter.value : 'all';
+
+  let list = cachedChatMessages;
+  if (filter === 'public') {
+    list = cachedChatMessages.filter(m => m.recipientId === 'all');
+  } else if (filter === 'direct') {
+    list = cachedChatMessages.filter(m => m.recipientId !== 'all');
+  }
+
+  chatMessagesList.innerHTML = '';
+
+  if (list.length === 0) {
+    chatMessagesList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 24px 12px; font-style: italic;">No messages found. Send a message to start conversation!</div>';
+    return;
+  }
+
+  list.forEach(m => {
+    const isMine = (m.senderId && currentUser?.id && String(m.senderId) === String(currentUser.id)) ||
+                   (currentUser?.role === 'admin' && m.senderRole === 'admin');
+
+    const card = document.createElement('div');
+    const isUnread = !m.read && !isMine;
+    card.className = `chat-card ${isMine ? 'sent-by-me' : ''} ${isUnread ? 'unread' : ''}`;
+
+    let targetBadge = '';
+    if (m.recipientId === 'all') {
+      targetBadge = '<span class="chat-target-badge public">Public Chat</span>';
+    } else {
+      if (isMine) {
+        const recName = m.recipientName || m.recipientUsername || 'user';
+        targetBadge = `<span class="chat-target-badge direct">Direct to @${escapeHtml(m.recipientUsername || recName)}</span>`;
+      } else {
+        targetBadge = '<span class="chat-target-badge direct">Direct message</span>';
+      }
     }
 
-    msgs.forEach(msg => {
-      const card = document.createElement('div');
-      card.className = `notif-card ${msg.read ? '' : 'unread'}`;
+    const senderDisplay = m.senderName ? `${escapeHtml(m.senderName)} (@${escapeHtml(m.senderUsername)})` : `@${escapeHtml(m.senderUsername)}`;
+    const roleBadge = m.senderRole === 'admin'
+      ? '<span class="role-badge admin">Admin</span>'
+      : '<span class="role-badge guest">Guest</span>';
 
-      const senderDisplay = msg.name ? `${escapeHtml(msg.name)} (@${escapeHtml(msg.username)})` : `@${escapeHtml(msg.username)}`;
-      const unreadBadge = !msg.read ? '<span class="conn-net-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue); border-color: rgba(10, 132, 255, 0.3);">New</span>' : '';
+    const unreadIndicator = isUnread
+      ? '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3); font-size: 10px;">New</span>'
+      : '';
 
-      card.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <strong style="font-size: 13px; color: var(--text-primary);">${senderDisplay}</strong>
-            ${unreadBadge}
-          </div>
-          <span style="font-size: 11px; color: var(--text-secondary); flex-shrink: 0;">${formatDate(msg.createdAt)}</span>
+    let actionsHtml = '';
+    if (!isMine) {
+      actionsHtml += `<button type="button" class="btn btn-secondary btn-sm reply-msg-btn" style="padding: 2px 8px; font-size: 11px;">Reply</button>`;
+      if (isUnread) {
+        actionsHtml += `<button type="button" class="btn btn-secondary btn-sm read-msg-btn" style="padding: 2px 8px; font-size: 11px;">Mark Read</button>`;
+      }
+    }
+    if (isMine || currentUser?.role === 'admin') {
+      actionsHtml += `<button type="button" class="btn btn-danger btn-sm del-msg-btn" style="padding: 2px 8px; font-size: 11px;">Delete</button>`;
+    }
+
+    card.innerHTML = `
+      <div class="chat-card-header">
+        <div class="chat-card-user">
+          <span>${senderDisplay}</span>
+          ${roleBadge}
+          ${targetBadge}
+          ${unreadIndicator}
         </div>
-        <div class="notif-msg-body">${escapeHtml(msg.text)}</div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
-          ${!msg.read ? '<button class="btn btn-secondary btn-sm mark-read-btn" style="padding: 3px 8px; font-size: 11px;">Mark as Read</button>' : ''}
-          <button class="btn btn-danger btn-sm del-msg-btn" style="padding: 3px 8px; font-size: 11px;">Delete</button>
-        </div>
-      `;
+        <span style="font-size: 11px; color: var(--text-secondary); flex-shrink: 0;">${formatDate(m.createdAt)}</span>
+      </div>
+      <div class="chat-card-text">${escapeHtml(m.text || m.message || '')}</div>
+      ${actionsHtml ? `<div class="chat-card-actions">${actionsHtml}</div>` : ''}
+    `;
 
-      const markBtn = card.querySelector('.mark-read-btn');
-      if (markBtn) {
-        markBtn.onclick = async () => {
+    const replyBtn = card.querySelector('.reply-msg-btn');
+    if (replyBtn) {
+      replyBtn.onclick = () => {
+        const targetRecipientId = m.senderRole === 'admin' ? 'admin' : m.senderId;
+        if (chatRecipientSelect) {
+          chatRecipientSelect.value = targetRecipientId;
+        }
+        if (chatMessageInput) {
+          chatMessageInput.focus();
+          chatMessageInput.placeholder = `Replying to @${m.senderUsername}...`;
+        }
+      };
+    }
+
+    const readBtn = card.querySelector('.read-msg-btn');
+    if (readBtn) {
+      readBtn.onclick = async () => {
+        try {
+          await fetch('/api/messages/read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId: m.id })
+          });
+          await loadChatMessages();
+          updateNotificationsSummary();
+        } catch (e) {
+          showToast(e.message);
+        }
+      };
+    }
+
+    const delBtn = card.querySelector('.del-msg-btn');
+    if (delBtn) {
+      delBtn.onclick = async () => {
+        if (confirm('Delete this message?')) {
           try {
-            await fetch('/api/messages/read', {
+            const res = await fetch('/api/messages/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ messageId: msg.id })
+              body: JSON.stringify({ messageId: m.id })
             });
-            loadAdminMessages();
-            updateNotificationsSummary();
+            const data = await res.json();
+            if (data.success) {
+              showToast('Message deleted');
+              await loadChatMessages();
+              updateNotificationsSummary();
+            } else {
+              showToast(data.error || 'Failed to delete message');
+            }
           } catch (e) {
             showToast(e.message);
           }
-        };
-      }
+        }
+      };
+    }
 
-      const delBtn = card.querySelector('.del-msg-btn');
-      if (delBtn) {
-        delBtn.onclick = async () => {
-          try {
-            await fetch('/api/messages/delete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ messageId: msg.id })
-            });
-            loadAdminMessages();
-            updateNotificationsSummary();
-          } catch (e) {
-            showToast(e.message);
-          }
-        };
-      }
+    chatMessagesList.appendChild(card);
+  });
+}
 
-      notifMessagesList.appendChild(card);
-    });
-  } catch (err) {}
+if (chatConversationFilter) {
+  chatConversationFilter.onchange = () => {
+    renderChatMessages();
+  };
 }
 
 if (markAllReadBtn) {
@@ -2086,7 +2201,7 @@ if (markAllReadBtn) {
       const data = await res.json();
       if (data.success) {
         showToast('All messages marked as read');
-        loadAdminMessages();
+        await loadChatMessages();
         updateNotificationsSummary();
       }
     } catch (e) {
@@ -2095,60 +2210,26 @@ if (markAllReadBtn) {
   };
 }
 
-async function loadGuestMessages() {
-  if (currentUser?.role === 'admin') return;
-  if (!guestMyMessagesList) return;
-  try {
-    const res = await fetch('/api/messages/my');
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.success) return;
-
-    const msgs = data.messages || [];
-    guestMyMessagesList.innerHTML = '';
-
-    if (msgs.length === 0) {
-      guestMyMessagesList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">You have not sent any messages yet.</div>';
-      return;
-    }
-
-    msgs.forEach(msg => {
-      const card = document.createElement('div');
-      card.className = 'notif-card';
-      const statusBadge = msg.read
-        ? '<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3); font-size: 10px;">Read by Admin</span>'
-        : '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3); font-size: 10px;">Delivered</span>';
-
-      card.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-          <span style="font-size: 11px; color: var(--text-secondary);">${formatDate(msg.createdAt)}</span>
-          ${statusBadge}
-        </div>
-        <div class="notif-msg-body">${escapeHtml(msg.text)}</div>
-      `;
-      guestMyMessagesList.appendChild(card);
-    });
-  } catch (err) {}
-}
-
-if (guestSendMessageForm) {
-  guestSendMessageForm.onsubmit = async (e) => {
+if (chatSendMessageForm) {
+  chatSendMessageForm.onsubmit = async (e) => {
     e.preventDefault();
-    if (!guestMessageInput) return;
-    const text = guestMessageInput.value.trim();
+    if (!chatMessageInput) return;
+    const text = chatMessageInput.value.trim();
     if (!text) return;
+    const recipientId = chatRecipientSelect ? chatRecipientSelect.value : 'all';
 
     try {
       const res = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ recipientId, text })
       });
       const data = await res.json();
       if (data.success) {
-        showToast('Message sent to server administrator');
-        guestMessageInput.value = '';
-        loadGuestMessages();
+        showToast('Message sent');
+        chatMessageInput.value = '';
+        chatMessageInput.placeholder = 'Type your message here...';
+        await loadChatMessages();
         updateNotificationsSummary();
       } else {
         showToast(data.error || 'Failed to send message');
@@ -2227,6 +2308,16 @@ async function init() {
       loadPendingRequests();
     }
   }, 6000);
+  setInterval(() => {
+    if (notifModal && notifModal.classList.contains('active')) {
+      if (paneNotifMessages && paneNotifMessages.style.display !== 'none') {
+        loadChatMessages();
+      }
+      if (currentUser?.role === 'admin' && paneNotifRequests && paneNotifRequests.style.display !== 'none') {
+        loadPendingRequests();
+      }
+    }
+  }, 4000);
 }
 
 init();

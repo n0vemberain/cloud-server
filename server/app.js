@@ -45,12 +45,12 @@ import {
 } from './userManager.js';
 import {
   createMessage,
-  getMyMessages,
-  getAllMessages,
+  getMessagesForUser,
   markMessageAsRead,
   markAllMessagesAsRead,
   deleteMessage,
-  getUnreadMessagesCount
+  getUnreadMessagesCount,
+  getChatRecipients
 } from './messageManager.js';
 
 export function createApp() {
@@ -246,56 +246,62 @@ export function createApp() {
   });
 
   // ---------------- MESSAGE & NOTIFICATION ROUTES ----------------
+  app.get('/api/messages/recipients', authMiddleware, (req, res) => {
+    try {
+      const allGuests = getGuests();
+      const recipients = getChatRecipients(req.user, allGuests);
+      res.json({ success: true, recipients });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/messages', authMiddleware, (req, res) => {
+    try {
+      const messages = getMessagesForUser(req.user);
+      res.json({ success: true, messages });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   app.post('/api/messages/send', authMiddleware, (req, res) => {
     try {
-      const message = req.body?.message || req.body?.text;
-      const guestId = req.user?.id || req.user?.username;
-      const username = req.user?.username;
-      const name = req.user?.name || username;
-      const newMsg = createMessage(guestId, username, name, message);
+      const messageText = req.body?.message || req.body?.text;
+      const recipientId = req.body?.recipientId || 'admin';
+      const allGuests = getGuests();
+      const targetGuest = allGuests.find(g => g.id === recipientId || g.username.toLowerCase() === recipientId.toLowerCase());
+      const recipient = {
+        id: targetGuest ? targetGuest.id : recipientId,
+        username: targetGuest ? targetGuest.username : (req.body?.recipientUsername || recipientId),
+        name: targetGuest ? (targetGuest.name || targetGuest.username) : (req.body?.recipientName || recipientId)
+      };
+
+      const newMsg = createMessage(req.user, recipient, messageText);
       res.json({ success: true, message: newMsg });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
     }
   });
 
-  app.get('/api/messages/my', authMiddleware, (req, res) => {
-    try {
-      const guestId = req.user?.id || req.user?.username;
-      const messages = getMyMessages(guestId);
-      res.json({ success: true, messages });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.get('/api/messages/all', authMiddleware, requireAdmin, (req, res) => {
-    try {
-      const messages = getAllMessages();
-      res.json({ success: true, messages });
-    } catch (err) {
-      res.status(500).json({ success: false, error: err.message });
-    }
-  });
-
-  app.post('/api/messages/read', authMiddleware, requireAdmin, (req, res) => {
+  app.post('/api/messages/read', authMiddleware, (req, res) => {
     try {
       const { messageId, all } = req.body;
       if (all) {
-        const result = markAllMessagesAsRead();
+        const result = markAllMessagesAsRead(req.user);
         return res.json(result);
       }
-      const result = markMessageAsRead(messageId);
+      const result = markMessageAsRead(messageId, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
     }
   });
 
-  app.post('/api/messages/delete', authMiddleware, requireAdmin, (req, res) => {
+  app.post('/api/messages/delete', authMiddleware, (req, res) => {
     try {
       const { messageId } = req.body;
-      const result = deleteMessage(messageId);
+      const result = deleteMessage(messageId, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -307,8 +313,8 @@ export function createApp() {
       const isAdmin = req.user?.role === 'admin';
       if (isAdmin) {
         const pending = getPendingRequests();
-        const unreadCount = getUnreadMessagesCount();
-        const allMessages = getAllMessages();
+        const unreadCount = getUnreadMessagesCount(req.user);
+        const allMessages = getMessagesForUser(req.user);
         return res.json({
           success: true,
           isAdmin: true,
@@ -321,11 +327,14 @@ export function createApp() {
       } else {
         const guestId = req.user?.id || req.user?.username;
         const myRequests = getMyRequests(guestId);
-        const myMessages = getMyMessages(guestId);
+        const myMessages = getMessagesForUser(req.user);
+        const unreadCount = getUnreadMessagesCount(req.user);
         return res.json({
           success: true,
           isAdmin: false,
           requests: myRequests,
+          unreadMessagesCount: unreadCount,
+          totalUnread: unreadCount,
           messages: myMessages
         });
       }

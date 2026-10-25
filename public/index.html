@@ -627,28 +627,13 @@
               </div>
 
               <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-color);">
-                <div style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Allowed Quick Access Folders</div>
-                <div class="checkbox-group" style="gap: 16px;">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="folderDesktop">
-                    <span>Desktop</span>
-                  </label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="folderDocuments">
-                    <span>Documents</span>
-                  </label>
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="folderDownloads" checked>
-                    <span>Downloads</span>
-                  </label>
-                </div>
-                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                  Restricted to checked folders only. Home, Pictures, Music, Movies, and Root Disk are hidden & denied for guests.
+                <div style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Allowed Access Folders</div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                  Add specific folders by full path. Guest will be restricted exclusively to these folders.
                 </div>
 
                 <!-- Custom Folders by Path -->
-                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
-                  <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Add Custom Folder by Path:</div>
+                <div>
                   <div style="display: flex; gap: 8px; align-items: center;">
                     <input type="text" id="createCustomFolderPath" placeholder="Paste full folder path (e.g. /Users/name/Documents/MyFolder)" style="flex: 1; font-size: 12px; font-family: monospace;">
                     <button type="button" id="createAddCustomFolderBtn" class="btn btn-secondary btn-sm" style="flex-shrink: 0;">Add Folder</button>
@@ -804,25 +789,13 @@
           </div>
 
           <div style="margin-bottom: 14px; padding-top: 10px; border-top: 1px solid var(--border-color);">
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">Allowed Quick Access Folders</div>
-            <div class="checkbox-group" style="gap: 14px;">
-              <label class="checkbox-label">
-                <input type="checkbox" id="editFolderDesktop">
-                <span>Desktop</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="editFolderDocuments">
-                <span>Documents</span>
-              </label>
-              <label class="checkbox-label">
-                <input type="checkbox" id="editFolderDownloads">
-                <span>Downloads</span>
-              </label>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Allowed Access Folders</div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+              Add specific folders by full path. Guest will be restricted exclusively to these folders.
             </div>
 
             <!-- Custom Folders by Path for Edit -->
-            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
-              <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Add Custom Folder by Path:</div>
+            <div>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <input type="text" id="editCustomFolderPath" placeholder="Paste full folder path (e.g. /Users/name/Documents/MyFolder)" style="flex: 1; font-size: 12px; font-family: monospace;">
                 <button type="button" id="editAddCustomFolderBtn" class="btn btn-secondary btn-sm" style="flex-shrink: 0;">Add Folder</button>
@@ -882,8 +855,8 @@
         </button>
       </div>
 
-      <!-- Admin View -->
-      <div id="adminNotifSection" class="admin-only">
+      <!-- Admin Tab Switcher -->
+      <div id="adminNotifTabs" class="admin-only">
         <div class="settings-nav-tabs" style="padding: 0 20px;">
           <button class="settings-tab-btn active" id="notifTabReqBtn" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -896,37 +869,51 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
-            <span>Guest Messages</span>
+            <span>Messages & Chat</span>
             <span id="notifMsgCountPill" class="count-pill" style="display: none; background: var(--accent-blue); color: white;">0</span>
           </button>
         </div>
-
-        <div class="modal-body" style="padding: 16px 20px; max-height: 480px; overflow-y: auto;">
-          <!-- Pane 1: Permission Requests -->
-          <div id="paneNotifRequests">
-            <div id="notifRequestsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
-          </div>
-
-          <!-- Pane 2: Guest Messages -->
-          <div id="paneNotifMessages" style="display: none;">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
-              <button id="markAllReadBtn" class="btn btn-secondary btn-sm" type="button">Mark All Read</button>
-            </div>
-            <div id="notifMessagesList" style="display: flex; flex-direction: column; gap: 10px;"></div>
-          </div>
-        </div>
       </div>
 
-      <!-- Guest View -->
-      <div id="guestNotifSection" class="guest-only" style="display: none;">
-        <div class="modal-body" style="padding: 18px 20px; max-height: 500px; overflow-y: auto;">
-          <!-- Compose Message Card -->
-          <div class="settings-card" style="margin-bottom: 16px;">
-            <h4 class="settings-card-title">Send a Message to Administrator</h4>
-            <p class="settings-card-desc">Need access to a specific folder or have a question? Type your message below.</p>
-            <form id="guestSendMessageForm" style="margin-top: 12px;">
-              <textarea id="guestMessageInput" placeholder="Write your message here..." rows="3" required style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 10px 12px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;"></textarea>
-              <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+      <div class="modal-body" style="padding: 16px 20px; max-height: 520px; overflow-y: auto;">
+        <!-- Pane 1: Permission Requests (Admin Only) -->
+        <div id="paneNotifRequests" class="admin-only">
+          <div id="notifRequestsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <!-- Pane 2: Messages & Chat (Used by both Admin and Guests) -->
+        <div id="paneNotifMessages">
+          <div class="chat-container">
+            <!-- Filter & Mark Read Header -->
+            <div class="chat-filter-bar">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Filter:</span>
+                <select id="chatConversationFilter" style="width: auto; padding: 4px 10px; font-size: 12px; height: 30px;">
+                  <option value="all">All Messages & Server Chat</option>
+                  <option value="public">Public Server Chat Only</option>
+                  <option value="direct">Direct Messages Only</option>
+                </select>
+              </div>
+              <button id="markAllReadBtn" class="btn btn-secondary btn-sm" type="button" style="padding: 4px 10px; font-size: 11px;">Mark All Read</button>
+            </div>
+
+            <!-- Messages Feed -->
+            <div id="chatMessagesList" class="chat-feed">
+              <!-- Dynamically populated messages -->
+            </div>
+
+            <!-- Composer Form -->
+            <form id="chatSendMessageForm" class="chat-composer-card">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <label for="chatRecipientSelect" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                  Send message to:
+                </label>
+                <select id="chatRecipientSelect" style="max-width: 280px; padding: 5px 10px; font-size: 12px; height: 32px;" required>
+                  <option value="all">Everyone (Public Server Chat)</option>
+                </select>
+              </div>
+              <textarea id="chatMessageInput" placeholder="Type your message here..." rows="2" required style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;"></textarea>
+              <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
                 <button type="submit" class="btn btn-primary btn-sm">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -936,13 +923,6 @@
                 </button>
               </div>
             </form>
-          </div>
-
-          <!-- My Sent Messages History -->
-          <div class="settings-card">
-            <h4 class="settings-card-title">Message History</h4>
-            <p class="settings-card-desc">Messages you have sent to the server administrator.</p>
-            <div id="guestMyMessagesList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
           </div>
         </div>
       </div>

@@ -83,6 +83,8 @@ body {
   transition: var(--transition);
   text-decoration: none;
   min-height: 36px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .btn-primary {
   background: var(--accent-blue);
@@ -113,6 +115,8 @@ body {
   padding: 6px 12px;
   font-size: 12px;
   min-height: 32px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .btn-block {
   width: 100%;
@@ -392,7 +396,10 @@ textarea:focus {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  flex: 1;
+  flex-shrink: 0;
+}
+.btn-label-desktop {
+  white-space: nowrap;
 }
 
 /* App Body */
@@ -1622,5 +1629,103 @@ textarea:focus {
   border-radius: 6px;
   font-size: 12px;
   gap: 8px;
+}
+
+/* Chat & Messaging UI */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.chat-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+.chat-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.chat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s ease;
+}
+.chat-card.sent-by-me {
+  border-color: rgba(10, 132, 255, 0.35);
+  background: rgba(10, 132, 255, 0.04);
+}
+.chat-card.unread {
+  border-left: 3px solid var(--accent-orange);
+  background: rgba(255, 159, 10, 0.05);
+}
+.chat-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chat-card-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.chat-target-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--border-glass);
+}
+.chat-target-badge.public {
+  color: var(--accent-green);
+  border-color: rgba(48, 209, 88, 0.3);
+  background: rgba(48, 209, 88, 0.1);
+}
+.chat-card-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  word-break: break-word;
+}
+.chat-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
+.chat-composer-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
 }
 
