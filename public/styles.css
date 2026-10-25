@@ -1565,3 +1565,62 @@ textarea:focus {
   }
 }
 
+/* Notification Badge Pill on Header Button */
+.notif-badge-pill {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: var(--accent-red);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 8px;
+  padding: 0 4px;
+  text-align: center;
+  box-shadow: 0 0 6px rgba(255, 69, 58, 0.6);
+  pointer-events: none;
+}
+
+/* Notification & Message Cards */
+.notif-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s ease;
+}
+.notif-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.notif-card.unread {
+  border-left: 3px solid var(--accent-blue);
+  background: rgba(10, 132, 255, 0.05);
+}
+.notif-msg-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  word-break: break-word;
+}
+.custom-folder-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  gap: 8px;
+}
+

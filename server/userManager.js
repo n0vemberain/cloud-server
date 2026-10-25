@@ -52,7 +52,7 @@ export function saveRequests(requests) {
   }
 }
 
-export function createPermissionRequest(guestId, username, permission) {
+export function createPermissionRequest(guestId, username, permission, name = null) {
   const allowed = ['canWrite', 'canDelete', 'canDownload'];
   if (!allowed.includes(permission)) {
     throw new Error('Invalid permission type requested.');
@@ -75,6 +75,7 @@ export function createPermissionRequest(guestId, username, permission) {
     id: 'req_' + crypto.randomBytes(6).toString('hex'),
     guestId,
     username,
+    name: name || username,
     permission,
     permissionLabel: permissionLabels[permission] || permission,
     status: 'pending',
@@ -134,6 +135,27 @@ export function declinePermissionRequest(requestId) {
   return { success: true, request: req };
 }
 
+function sanitizeCustomFolders(folders) {
+  if (!Array.isArray(folders)) return [];
+  const result = [];
+  for (const item of folders) {
+    const rawPath = typeof item === 'string' ? item : item?.path;
+    if (rawPath && typeof rawPath === 'string' && rawPath.trim()) {
+      const fullPath = path.resolve(rawPath.trim());
+      const folderName = (typeof item === 'object' && item.name && item.name.trim())
+        ? item.name.trim()
+        : path.basename(fullPath);
+      if (!result.some(f => f.path === fullPath)) {
+        result.push({
+          name: folderName || 'Folder',
+          path: fullPath
+        });
+      }
+    }
+  }
+  return result;
+}
+
 export function getGuests() {
   const guests = loadGuests();
   return guests.map(g => ({
@@ -148,7 +170,10 @@ export function getGuests() {
       folderAccess: {
         desktop: g.permissions?.folderAccess?.desktop ?? false,
         documents: g.permissions?.folderAccess?.documents ?? false,
-        downloads: g.permissions?.folderAccess?.downloads ?? true
+        downloads: g.permissions?.folderAccess?.downloads ?? true,
+        customFolders: Array.isArray(g.permissions?.folderAccess?.customFolders)
+          ? g.permissions.folderAccess.customFolders
+          : []
       }
     },
     createdAt: g.createdAt
@@ -176,7 +201,8 @@ export function createGuest(name, username, password, permissions = {}) {
   const folderAccess = {
     desktop: Boolean(permissions.folderAccess?.desktop),
     documents: Boolean(permissions.folderAccess?.documents),
-    downloads: permissions.folderAccess ? Boolean(permissions.folderAccess.downloads) : true
+    downloads: permissions.folderAccess ? Boolean(permissions.folderAccess.downloads) : true,
+    customFolders: sanitizeCustomFolders(permissions.folderAccess?.customFolders)
   };
 
   const newGuest = {
@@ -242,14 +268,18 @@ export function updateGuest(id, updates = {}) {
   }
 
   if (updates.permissions) {
-    const curFolder = guest.permissions?.folderAccess || { desktop: false, documents: false, downloads: true };
+    const curFolder = guest.permissions?.folderAccess || { desktop: false, documents: false, downloads: true, customFolders: [] };
+    const newFA = updates.permissions.folderAccess;
     guest.permissions = {
       ...guest.permissions,
       ...updates.permissions,
-      folderAccess: updates.permissions.folderAccess ? {
-        desktop: Boolean(updates.permissions.folderAccess.desktop),
-        documents: Boolean(updates.permissions.folderAccess.documents),
-        downloads: Boolean(updates.permissions.folderAccess.downloads)
+      folderAccess: newFA ? {
+        desktop: Boolean(newFA.desktop),
+        documents: Boolean(newFA.documents),
+        downloads: Boolean(newFA.downloads),
+        customFolders: newFA.customFolders !== undefined
+          ? sanitizeCustomFolders(newFA.customFolders)
+          : (curFolder.customFolders || [])
       } : curFolder
     };
   }
@@ -296,7 +326,7 @@ export function authenticateUser(username, password, adminConfig) {
             canWrite: true,
             canDelete: true,
             canDownload: true,
-            folderAccess: { desktop: true, documents: true, downloads: true }
+            folderAccess: { desktop: true, documents: true, downloads: true, customFolders: [] }
           }
         }
       };
@@ -326,7 +356,10 @@ export function authenticateUser(username, password, adminConfig) {
           folderAccess: {
             desktop: guest.permissions?.folderAccess?.desktop ?? false,
             documents: guest.permissions?.folderAccess?.documents ?? false,
-            downloads: guest.permissions?.folderAccess?.downloads ?? true
+            downloads: guest.permissions?.folderAccess?.downloads ?? true,
+            customFolders: Array.isArray(guest.permissions?.folderAccess?.customFolders)
+              ? guest.permissions.folderAccess.customFolders
+              : []
           }
         }
       }

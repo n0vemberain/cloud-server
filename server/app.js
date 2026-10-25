@@ -43,6 +43,15 @@ import {
   approvePermissionRequest,
   declinePermissionRequest
 } from './userManager.js';
+import {
+  createMessage,
+  getMyMessages,
+  getAllMessages,
+  markMessageAsRead,
+  markAllMessagesAsRead,
+  deleteMessage,
+  getUnreadMessagesCount
+} from './messageManager.js';
 
 export function createApp() {
   const app = express();
@@ -199,7 +208,8 @@ export function createApp() {
       const { permission } = req.body;
       const guestId = req.user?.id || req.user?.username;
       const username = req.user?.username;
-      const request = createPermissionRequest(guestId, username, permission);
+      const name = req.user?.name || username;
+      const request = createPermissionRequest(guestId, username, permission, name);
       res.json({ success: true, request });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -230,6 +240,116 @@ export function createApp() {
       const { requestId } = req.body;
       const result = declinePermissionRequest(requestId);
       res.json(result);
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  // ---------------- MESSAGE & NOTIFICATION ROUTES ----------------
+  app.post('/api/messages/send', authMiddleware, (req, res) => {
+    try {
+      const message = req.body?.message || req.body?.text;
+      const guestId = req.user?.id || req.user?.username;
+      const username = req.user?.username;
+      const name = req.user?.name || username;
+      const newMsg = createMessage(guestId, username, name, message);
+      res.json({ success: true, message: newMsg });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/messages/my', authMiddleware, (req, res) => {
+    try {
+      const guestId = req.user?.id || req.user?.username;
+      const messages = getMyMessages(guestId);
+      res.json({ success: true, messages });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/messages/all', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const messages = getAllMessages();
+      res.json({ success: true, messages });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/messages/read', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const { messageId, all } = req.body;
+      if (all) {
+        const result = markAllMessagesAsRead();
+        return res.json(result);
+      }
+      const result = markMessageAsRead(messageId);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/messages/delete', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const { messageId } = req.body;
+      const result = deleteMessage(messageId);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/notifications/summary', authMiddleware, (req, res) => {
+    try {
+      const isAdmin = req.user?.role === 'admin';
+      if (isAdmin) {
+        const pending = getPendingRequests();
+        const unreadCount = getUnreadMessagesCount();
+        const allMessages = getAllMessages();
+        return res.json({
+          success: true,
+          isAdmin: true,
+          pendingRequests: pending,
+          pendingCount: pending.length,
+          unreadMessagesCount: unreadCount,
+          totalUnread: pending.length + unreadCount,
+          messages: allMessages
+        });
+      } else {
+        const guestId = req.user?.id || req.user?.username;
+        const myRequests = getMyRequests(guestId);
+        const myMessages = getMyMessages(guestId);
+        return res.json({
+          success: true,
+          isAdmin: false,
+          requests: myRequests,
+          messages: myMessages
+        });
+      }
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/files/validate-path', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const rawPath = req.body.path;
+      if (!rawPath || typeof rawPath !== 'string' || !rawPath.trim()) {
+        return res.status(400).json({ success: false, error: 'Path is required.' });
+      }
+      const safePath = path.resolve(rawPath.trim());
+      if (!fs.existsSync(safePath)) {
+        return res.status(404).json({ success: false, error: 'Directory does not exist on this Mac.' });
+      }
+      const stat = fs.statSync(safePath);
+      if (!stat.isDirectory()) {
+        return res.status(400).json({ success: false, error: 'Specified path is a file, not a directory.' });
+      }
+      const folderName = path.basename(safePath) || safePath;
+      res.json({ success: true, path: safePath, name: folderName });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
     }

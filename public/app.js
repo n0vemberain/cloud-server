@@ -39,6 +39,27 @@ const batteryText = document.getElementById('batteryText');
 const storageStats = document.getElementById('storageStats');
 const storageBarFill = document.getElementById('storageBarFill');
 const folderStatsPill = document.getElementById('folderStatsPill');
+const copyCurrentPathBtn = document.getElementById('copyCurrentPathBtn');
+
+// Notifications & Messages Modal Elements
+const notifModal = document.getElementById('notifModal');
+const notifBtn = document.getElementById('notifBtn');
+const notifCloseBtn = document.getElementById('notifCloseBtn');
+const notifBadgeCount = document.getElementById('notifBadgeCount');
+const adminNotifSection = document.getElementById('adminNotifSection');
+const guestNotifSection = document.getElementById('guestNotifSection');
+const notifTabReqBtn = document.getElementById('notifTabReqBtn');
+const notifTabMsgBtn = document.getElementById('notifTabMsgBtn');
+const notifReqCountPill = document.getElementById('notifReqCountPill');
+const notifMsgCountPill = document.getElementById('notifMsgCountPill');
+const paneNotifRequests = document.getElementById('paneNotifRequests');
+const paneNotifMessages = document.getElementById('paneNotifMessages');
+const notifRequestsList = document.getElementById('notifRequestsList');
+const notifMessagesList = document.getElementById('notifMessagesList');
+const markAllReadBtn = document.getElementById('markAllReadBtn');
+const guestSendMessageForm = document.getElementById('guestSendMessageForm');
+const guestMessageInput = document.getElementById('guestMessageInput');
+const guestMyMessagesList = document.getElementById('guestMyMessagesList');
 
 // Unified Settings Modal Elements
 const settingsModal = document.getElementById('settingsModal');
@@ -1006,6 +1027,11 @@ async function loadGuests() {
       if (g.permissions?.folderAccess?.desktop) allowedFolders.push('Desktop');
       if (g.permissions?.folderAccess?.documents) allowedFolders.push('Documents');
       if (g.permissions?.folderAccess?.downloads) allowedFolders.push('Downloads');
+      if (Array.isArray(g.permissions?.folderAccess?.customFolders)) {
+        g.permissions.folderAccess.customFolders.forEach(cf => {
+          if (cf && cf.name) allowedFolders.push(cf.name);
+        });
+      }
       const foldersText = allowedFolders.length > 0 ? allowedFolders.join(', ') : 'None';
 
       const permsText = [
@@ -1096,6 +1122,149 @@ async function loadGuests() {
   } catch (err) {}
 }
 
+let createCustomFolders = [];
+let editCustomFolders = [];
+
+function renderCreateCustomFolders() {
+  const container = document.getElementById('createCustomFoldersList');
+  if (!container) return;
+  container.innerHTML = '';
+  if (createCustomFolders.length === 0) {
+    container.innerHTML = '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">No custom folder paths added.</div>';
+    return;
+  }
+  createCustomFolders.forEach((cf, index) => {
+    const chip = document.createElement('div');
+    chip.className = 'custom-folder-chip';
+    chip.innerHTML = `
+      <div style="min-width: 0; flex: 1;">
+        <span class="custom-folder-chip-name">${escapeHtml(cf.name)}</span>
+        <span class="custom-folder-chip-path" title="${escapeHtml(cf.path)}">${escapeHtml(cf.path)}</span>
+      </div>
+      <button type="button" class="custom-folder-chip-remove" title="Remove Folder">&times;</button>
+    `;
+    chip.querySelector('.custom-folder-chip-remove').onclick = () => {
+      createCustomFolders.splice(index, 1);
+      renderCreateCustomFolders();
+    };
+    container.appendChild(chip);
+  });
+}
+
+function renderEditCustomFolders() {
+  const container = document.getElementById('editCustomFoldersList');
+  if (!container) return;
+  container.innerHTML = '';
+  if (editCustomFolders.length === 0) {
+    container.innerHTML = '<div style="font-size: 11px; color: var(--text-muted); font-style: italic;">No custom folder paths added.</div>';
+    return;
+  }
+  editCustomFolders.forEach((cf, index) => {
+    const chip = document.createElement('div');
+    chip.className = 'custom-folder-chip';
+    chip.innerHTML = `
+      <div style="min-width: 0; flex: 1;">
+        <span class="custom-folder-chip-name">${escapeHtml(cf.name)}</span>
+        <span class="custom-folder-chip-path" title="${escapeHtml(cf.path)}">${escapeHtml(cf.path)}</span>
+      </div>
+      <button type="button" class="custom-folder-chip-remove" title="Remove Folder">&times;</button>
+    `;
+    chip.querySelector('.custom-folder-chip-remove').onclick = () => {
+      editCustomFolders.splice(index, 1);
+      renderEditCustomFolders();
+    };
+    container.appendChild(chip);
+  });
+}
+
+async function addCustomFolderToCreate() {
+  const input = document.getElementById('createCustomFolderPath');
+  if (!input) return;
+  const folderPath = input.value.trim();
+  if (!folderPath) {
+    showToast('Please enter or paste a valid folder path');
+    return;
+  }
+  if (createCustomFolders.some(cf => cf.path === folderPath)) {
+    showToast('Folder already added to list');
+    return;
+  }
+  try {
+    const res = await fetch('/api/files/validate-path', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: folderPath })
+    });
+    const data = await res.json();
+    if (data.success) {
+      createCustomFolders.push({ name: data.name, path: data.path });
+      input.value = '';
+      renderCreateCustomFolders();
+      showToast(`Added folder: ${data.name}`);
+    } else {
+      showToast(data.error || 'Invalid folder path');
+    }
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+async function addCustomFolderToEdit() {
+  const input = document.getElementById('editCustomFolderPath');
+  if (!input) return;
+  const folderPath = input.value.trim();
+  if (!folderPath) {
+    showToast('Please enter or paste a valid folder path');
+    return;
+  }
+  if (editCustomFolders.some(cf => cf.path === folderPath)) {
+    showToast('Folder already added to list');
+    return;
+  }
+  try {
+    const res = await fetch('/api/files/validate-path', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: folderPath })
+    });
+    const data = await res.json();
+    if (data.success) {
+      editCustomFolders.push({ name: data.name, path: data.path });
+      input.value = '';
+      renderEditCustomFolders();
+      showToast(`Added folder: ${data.name}`);
+    } else {
+      showToast(data.error || 'Invalid folder path');
+    }
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
+const createAddCustomFolderBtn = document.getElementById('createAddCustomFolderBtn');
+const createCustomFolderPathInput = document.getElementById('createCustomFolderPath');
+if (createAddCustomFolderBtn) createAddCustomFolderBtn.onclick = addCustomFolderToCreate;
+if (createCustomFolderPathInput) {
+  createCustomFolderPathInput.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCustomFolderToCreate();
+    }
+  };
+}
+
+const editAddCustomFolderBtn = document.getElementById('editAddCustomFolderBtn');
+const editCustomFolderPathInput = document.getElementById('editCustomFolderPath');
+if (editAddCustomFolderBtn) editAddCustomFolderBtn.onclick = addCustomFolderToEdit;
+if (editCustomFolderPathInput) {
+  editCustomFolderPathInput.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addCustomFolderToEdit();
+    }
+  };
+}
+
 function openEditGuestModal(guest) {
   const modal = document.getElementById('editGuestModal');
   if (!modal) return;
@@ -1109,6 +1278,12 @@ function openEditGuestModal(guest) {
   document.getElementById('editPermDownload').checked = Boolean(guest.permissions?.canDownload);
   document.getElementById('editPermWrite').checked = Boolean(guest.permissions?.canWrite);
   document.getElementById('editPermDelete').checked = Boolean(guest.permissions?.canDelete);
+
+  editCustomFolders = Array.isArray(guest.permissions?.folderAccess?.customFolders)
+    ? JSON.parse(JSON.stringify(guest.permissions.folderAccess.customFolders))
+    : [];
+  renderEditCustomFolders();
+
   modal.classList.add('active');
 }
 
@@ -1136,7 +1311,8 @@ if (editGuestForm) {
     const folderAccess = {
       desktop: document.getElementById('editFolderDesktop').checked,
       documents: document.getElementById('editFolderDocuments').checked,
-      downloads: document.getElementById('editFolderDownloads').checked
+      downloads: document.getElementById('editFolderDownloads').checked,
+      customFolders: editCustomFolders
     };
 
     try {
@@ -1183,6 +1359,7 @@ async function loadPendingRequests() {
     if (!data.success) return;
 
     const pendingRequestsList = document.getElementById('pendingRequestsList');
+    const notifRequestsList = document.getElementById('notifRequestsList');
     const pendingRequestsCountBadge = document.getElementById('pendingRequestsCountBadge');
     const pendingRequestsCountPill = document.getElementById('pendingRequestsCountPill');
 
@@ -1199,74 +1376,83 @@ async function loadPendingRequests() {
       }
     }
 
-    if (!pendingRequestsList) return;
-    pendingRequestsList.innerHTML = '';
+    function renderRequestsList(container) {
+      if (!container) return;
+      container.innerHTML = '';
 
-    if (count === 0) {
-      pendingRequestsList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 6px 0;">No pending requests from guests.</div>';
-      return;
+      if (count === 0) {
+        container.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 10px 0; text-align: center;">No pending requests from guests.</div>';
+        return;
+      }
+
+      data.pending.forEach(req => {
+        const card = document.createElement('div');
+        card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px;';
+
+        const senderDisplay = req.name ? `${escapeHtml(req.name)} (@${escapeHtml(req.username)})` : `@${escapeHtml(req.username)}`;
+
+        card.innerHTML = `
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
+              <span>${senderDisplay}</span> requested <span style="color: var(--accent-blue);">${escapeHtml(req.permissionLabel)}</span>
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+              ${formatDate(req.createdAt)}
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-shrink: 0;">
+            <button class="btn btn-primary btn-sm approve-req-btn" style="background: var(--accent-green); border-color: var(--accent-green); padding: 4px 10px; font-size: 12px;">Approve</button>
+            <button class="btn btn-secondary btn-sm decline-req-btn" style="padding: 4px 10px; font-size: 12px;">Decline</button>
+          </div>
+        `;
+
+        card.querySelector('.approve-req-btn').onclick = async () => {
+          try {
+            const ares = await fetch('/api/requests/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: req.id })
+            });
+            const adata = await ares.json();
+            if (adata.success) {
+              showToast(`Approved "${req.permissionLabel}" for ${senderDisplay}`);
+              loadPendingRequests();
+              loadGuests();
+              updateNotificationsSummary();
+            } else {
+              showToast(adata.error || 'Failed to approve');
+            }
+          } catch (e) {
+            showToast(e.message);
+          }
+        };
+
+        card.querySelector('.decline-req-btn').onclick = async () => {
+          try {
+            const dres = await fetch('/api/requests/decline', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: req.id })
+            });
+            const ddata = await dres.json();
+            if (ddata.success) {
+              showToast(`Declined request from ${senderDisplay}`);
+              loadPendingRequests();
+              updateNotificationsSummary();
+            } else {
+              showToast(ddata.error || 'Failed to decline');
+            }
+          } catch (e) {
+            showToast(e.message);
+          }
+        };
+
+        container.appendChild(card);
+      });
     }
 
-    data.pending.forEach(req => {
-      const card = document.createElement('div');
-      card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px;';
-
-      card.innerHTML = `
-        <div>
-          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
-            <span>@${req.username}</span> requested <span style="color: var(--accent-blue);">${req.permissionLabel}</span>
-          </div>
-          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-            ${formatDate(req.createdAt)}
-          </div>
-        </div>
-        <div style="display: flex; gap: 8px; flex-shrink: 0;">
-          <button class="btn btn-primary btn-sm approve-req-btn" style="background: var(--accent-green); border-color: var(--accent-green); padding: 4px 10px; font-size: 12px;">Approve</button>
-          <button class="btn btn-secondary btn-sm decline-req-btn" style="padding: 4px 10px; font-size: 12px;">Decline</button>
-        </div>
-      `;
-
-      card.querySelector('.approve-req-btn').onclick = async () => {
-        try {
-          const ares = await fetch('/api/requests/approve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestId: req.id })
-          });
-          const adata = await ares.json();
-          if (adata.success) {
-            showToast(`Approved "${req.permissionLabel}" for @${req.username}`);
-            loadPendingRequests();
-            loadGuests();
-          } else {
-            showToast(adata.error || 'Failed to approve');
-          }
-        } catch (e) {
-          showToast(e.message);
-        }
-      };
-
-      card.querySelector('.decline-req-btn').onclick = async () => {
-        try {
-          const dres = await fetch('/api/requests/decline', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestId: req.id })
-          });
-          const ddata = await dres.json();
-          if (ddata.success) {
-            showToast(`Declined request from @${req.username}`);
-            loadPendingRequests();
-          } else {
-            showToast(ddata.error || 'Failed to decline');
-          }
-        } catch (e) {
-          showToast(e.message);
-        }
-      };
-
-      pendingRequestsList.appendChild(card);
-    });
+    renderRequestsList(pendingRequestsList);
+    renderRequestsList(notifRequestsList);
   } catch (err) {}
 }
 
@@ -1288,6 +1474,11 @@ async function loadGuestPermissions() {
     if (fa.desktop) allowed.push('Desktop');
     if (fa.documents) allowed.push('Documents');
     if (fa.downloads) allowed.push('Downloads');
+    if (Array.isArray(fa.customFolders)) {
+      fa.customFolders.forEach(cf => {
+        if (cf && cf.name) allowed.push(cf.name);
+      });
+    }
 
     if (guestAllowedFoldersDesc) {
       guestAllowedFoldersDesc.textContent = allowed.length > 0
@@ -1296,7 +1487,7 @@ async function loadGuestPermissions() {
     }
 
     guestAllowedFoldersBadges.innerHTML = allowed.map(folder =>
-      `<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">${folder}</span>`
+      `<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">${escapeHtml(folder)}</span>`
     ).join('') || '<span class="conn-net-badge" style="color: var(--accent-orange);">None</span>';
   }
 
@@ -1348,6 +1539,7 @@ async function requestGuestPermission(permission) {
     if (data.success) {
       showToast('Permission request submitted to administrator');
       loadGuestPermissions();
+      updateNotificationsSummary();
     } else {
       showToast(data.error || 'Failed to submit request');
     }
@@ -1367,7 +1559,8 @@ createGuestForm.onsubmit = async (e) => {
   const folderAccess = {
     desktop: document.getElementById('folderDesktop').checked,
     documents: document.getElementById('folderDocuments').checked,
-    downloads: document.getElementById('folderDownloads').checked
+    downloads: document.getElementById('folderDownloads').checked,
+    customFolders: createCustomFolders
   };
 
   try {
@@ -1390,6 +1583,8 @@ createGuestForm.onsubmit = async (e) => {
     if (data.success) {
       showToast(`Guest "${name || username}" created successfully!`);
       createGuestForm.reset();
+      createCustomFolders = [];
+      renderCreateCustomFolders();
       document.getElementById('folderDownloads').checked = true;
       document.getElementById('permDownload').checked = true;
       loadGuests();
@@ -1655,6 +1850,34 @@ logoutBtn.onclick = async () => {
 };
 
 // Toolbar buttons
+if (copyCurrentPathBtn) {
+  copyCurrentPathBtn.onclick = () => {
+    if (!currentPath) {
+      showToast('No directory path available');
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentPath).then(() => {
+        showToast(`Copied folder path: ${currentPath}`);
+      }).catch(() => {
+        fallbackCopyText(currentPath);
+      });
+    } else {
+      fallbackCopyText(currentPath);
+    }
+  };
+}
+
+function fallbackCopyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+  showToast(`Copied: ${text}`);
+}
+
 viewToggleBtn.onclick = () => {
   viewMode = viewMode === 'grid' ? 'table' : 'grid';
   localStorage.setItem('mac_view_mode', viewMode);
@@ -1688,6 +1911,254 @@ searchInput.oninput = (e) => {
   }, 200);
 };
 
+// Notifications & Messages Modal Management
+let activeNotifTab = 'requests';
+
+function openNotifModal(tab = 'requests') {
+  if (!notifModal) return;
+  const isAdmin = currentUser?.role === 'admin';
+  if (adminNotifSection) adminNotifSection.style.display = isAdmin ? 'block' : 'none';
+  if (guestNotifSection) guestNotifSection.style.display = !isAdmin ? 'block' : 'none';
+
+  notifModal.classList.add('active');
+
+  if (isAdmin) {
+    switchNotifTab(tab);
+    loadPendingRequests();
+    loadAdminMessages();
+  } else {
+    loadGuestMessages();
+  }
+  updateNotificationsSummary();
+}
+
+function closeNotifModal() {
+  if (notifModal) notifModal.classList.remove('active');
+}
+
+function switchNotifTab(tab) {
+  activeNotifTab = tab;
+  if (tab === 'requests') {
+    if (notifTabReqBtn) notifTabReqBtn.classList.add('active');
+    if (notifTabMsgBtn) notifTabMsgBtn.classList.remove('active');
+    if (paneNotifRequests) paneNotifRequests.style.display = 'block';
+    if (paneNotifMessages) paneNotifMessages.style.display = 'none';
+    loadPendingRequests();
+  } else {
+    if (notifTabReqBtn) notifTabReqBtn.classList.remove('active');
+    if (notifTabMsgBtn) notifTabMsgBtn.classList.add('active');
+    if (paneNotifRequests) paneNotifRequests.style.display = 'none';
+    if (paneNotifMessages) paneNotifMessages.style.display = 'block';
+    loadAdminMessages();
+  }
+}
+
+if (notifBtn) notifBtn.onclick = () => openNotifModal('requests');
+if (notifCloseBtn) notifCloseBtn.onclick = closeNotifModal;
+if (notifTabReqBtn) notifTabReqBtn.onclick = () => switchNotifTab('requests');
+if (notifTabMsgBtn) notifTabMsgBtn.onclick = () => switchNotifTab('messages');
+
+async function updateNotificationsSummary() {
+  try {
+    const res = await fetch('/api/notifications/summary');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    const totalUnread = data.totalUnread || 0;
+    if (notifBadgeCount) {
+      if (totalUnread > 0) {
+        notifBadgeCount.textContent = totalUnread > 99 ? '99+' : totalUnread;
+        notifBadgeCount.style.display = 'inline-flex';
+      } else {
+        notifBadgeCount.style.display = 'none';
+      }
+    }
+
+    if (notifReqCountPill) {
+      const pCount = data.pendingRequestsCount || 0;
+      if (pCount > 0) {
+        notifReqCountPill.textContent = pCount;
+        notifReqCountPill.style.display = 'inline-flex';
+      } else {
+        notifReqCountPill.style.display = 'none';
+      }
+    }
+
+    if (notifMsgCountPill) {
+      const mCount = data.unreadMessagesCount || 0;
+      if (mCount > 0) {
+        notifMsgCountPill.textContent = mCount;
+        notifMsgCountPill.style.display = 'inline-flex';
+      } else {
+        notifMsgCountPill.style.display = 'none';
+      }
+    }
+  } catch (err) {}
+}
+
+async function loadAdminMessages() {
+  if (currentUser?.role !== 'admin') return;
+  if (!notifMessagesList) return;
+  try {
+    const res = await fetch('/api/messages/all');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    const msgs = data.messages || [];
+    notifMessagesList.innerHTML = '';
+
+    if (msgs.length === 0) {
+      notifMessagesList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 12px 0; text-align: center;">No messages from guests yet.</div>';
+      return;
+    }
+
+    msgs.forEach(msg => {
+      const card = document.createElement('div');
+      card.className = `notif-card ${msg.read ? '' : 'unread'}`;
+
+      const senderDisplay = msg.name ? `${escapeHtml(msg.name)} (@${escapeHtml(msg.username)})` : `@${escapeHtml(msg.username)}`;
+      const unreadBadge = !msg.read ? '<span class="conn-net-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue); border-color: rgba(10, 132, 255, 0.3);">New</span>' : '';
+
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <strong style="font-size: 13px; color: var(--text-primary);">${senderDisplay}</strong>
+            ${unreadBadge}
+          </div>
+          <span style="font-size: 11px; color: var(--text-secondary); flex-shrink: 0;">${formatDate(msg.createdAt)}</span>
+        </div>
+        <div class="notif-msg-body">${escapeHtml(msg.text)}</div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+          ${!msg.read ? '<button class="btn btn-secondary btn-sm mark-read-btn" style="padding: 3px 8px; font-size: 11px;">Mark as Read</button>' : ''}
+          <button class="btn btn-danger btn-sm del-msg-btn" style="padding: 3px 8px; font-size: 11px;">Delete</button>
+        </div>
+      `;
+
+      const markBtn = card.querySelector('.mark-read-btn');
+      if (markBtn) {
+        markBtn.onclick = async () => {
+          try {
+            await fetch('/api/messages/read', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: msg.id })
+            });
+            loadAdminMessages();
+            updateNotificationsSummary();
+          } catch (e) {
+            showToast(e.message);
+          }
+        };
+      }
+
+      const delBtn = card.querySelector('.del-msg-btn');
+      if (delBtn) {
+        delBtn.onclick = async () => {
+          try {
+            await fetch('/api/messages/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: msg.id })
+            });
+            loadAdminMessages();
+            updateNotificationsSummary();
+          } catch (e) {
+            showToast(e.message);
+          }
+        };
+      }
+
+      notifMessagesList.appendChild(card);
+    });
+  } catch (err) {}
+}
+
+if (markAllReadBtn) {
+  markAllReadBtn.onclick = async () => {
+    try {
+      const res = await fetch('/api/messages/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('All messages marked as read');
+        loadAdminMessages();
+        updateNotificationsSummary();
+      }
+    } catch (e) {
+      showToast(e.message);
+    }
+  };
+}
+
+async function loadGuestMessages() {
+  if (currentUser?.role === 'admin') return;
+  if (!guestMyMessagesList) return;
+  try {
+    const res = await fetch('/api/messages/my');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    const msgs = data.messages || [];
+    guestMyMessagesList.innerHTML = '';
+
+    if (msgs.length === 0) {
+      guestMyMessagesList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">You have not sent any messages yet.</div>';
+      return;
+    }
+
+    msgs.forEach(msg => {
+      const card = document.createElement('div');
+      card.className = 'notif-card';
+      const statusBadge = msg.read
+        ? '<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3); font-size: 10px;">Read by Admin</span>'
+        : '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3); font-size: 10px;">Delivered</span>';
+
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span style="font-size: 11px; color: var(--text-secondary);">${formatDate(msg.createdAt)}</span>
+          ${statusBadge}
+        </div>
+        <div class="notif-msg-body">${escapeHtml(msg.text)}</div>
+      `;
+      guestMyMessagesList.appendChild(card);
+    });
+  } catch (err) {}
+}
+
+if (guestSendMessageForm) {
+  guestSendMessageForm.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!guestMessageInput) return;
+    const text = guestMessageInput.value.trim();
+    if (!text) return;
+
+    try {
+      const res = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Message sent to server administrator');
+        guestMessageInput.value = '';
+        loadGuestMessages();
+        updateNotificationsSummary();
+      } else {
+        showToast(data.error || 'Failed to send message');
+      }
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+}
+
 // Editor listeners
 editorCloseBtn.onclick = () => editorModal.classList.remove('active');
 editorSaveBtn.onclick = saveCurrentFile;
@@ -1702,6 +2173,8 @@ window.addEventListener('keydown', (e) => {
     if (editorModal) editorModal.classList.remove('active');
     closeMediaPreview();
     if (settingsModal) settingsModal.classList.remove('active');
+    if (notifModal) notifModal.classList.remove('active');
+    closeEditGuestModal();
     closePrompt();
     closeItemActionSheet();
     closeMobileSidebar();
@@ -1736,6 +2209,8 @@ async function init() {
   await updateMetrics();
   await updateTunnelStatus();
   await loadDirectory();
+  await updateNotificationsSummary();
+
   if (currentUser?.role === 'admin') {
     loadConnections();
     loadPendingRequests();
@@ -1745,6 +2220,7 @@ async function init() {
 
   setInterval(updateMetrics, 10000);
   setInterval(updateTunnelStatus, 8000);
+  setInterval(updateNotificationsSummary, 6000);
   setInterval(() => {
     if (currentUser?.role === 'admin') {
       loadConnections();
