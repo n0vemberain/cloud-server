@@ -43,7 +43,8 @@ import {
   getPendingRequests,
   createPermissionRequest,
   approvePermissionRequest,
-  declinePermissionRequest
+  declinePermissionRequest,
+  markRequestsAsReadForGuest
 } from './userManager.js';
 import {
   createMessage,
@@ -55,6 +56,7 @@ import {
   getChatRecipients
 } from './messageManager.js';
 import {
+  recordAccountActivity,
   getDownloadActivities,
   getUnreadDownloadsCount,
   markDownloadsAsRead,
@@ -377,6 +379,16 @@ export function createApp() {
     }
   });
 
+  app.post('/api/notifications/requests/read', authMiddleware, (req, res) => {
+    try {
+      const guestId = req.user?.id || req.user?.username;
+      const result = markRequestsAsReadForGuest(guestId);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
   // ---------------- USER PROFILE ROUTES ----------------
   app.get('/api/profile', authMiddleware, (req, res) => {
     try {
@@ -447,6 +459,24 @@ export function createApp() {
         const result = updateGuestSelfProfile(guestId, { name, username, password });
         req.user.name = result.user.name;
         req.user.username = result.user.username;
+
+        if (result.passwordChanged) {
+          recordAccountActivity({
+            type: 'guest_password_changed',
+            userId: result.user.id,
+            username: result.user.username,
+            name: result.user.name,
+            role: 'guest',
+            actionText: `Guest @${result.user.username} (${result.user.name}) updated their account password.`,
+            meta: {
+              guestId: result.user.id,
+              username: result.user.username,
+              guestUsername: result.user.username,
+              newPassword: password.trim()
+            }
+          });
+        }
+
         const { token } = generateToken(result.user, cfg);
         res.cookie('mac_token', token, {
           httpOnly: true,

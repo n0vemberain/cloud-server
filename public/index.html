@@ -759,11 +759,19 @@
 
               <div style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 14px;">
                 <h5 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Change Password</h5>
-                <div class="input-group" style="margin-bottom: 14px;">
-                  <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-                    New Password
-                  </label>
-                  <input type="password" id="guestProfileNewPass" placeholder="Leave blank to keep current password">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                  <div class="input-group">
+                    <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                      New Password
+                    </label>
+                    <input type="password" id="guestProfileNewPass" placeholder="Min 4 characters (leave blank to keep current)">
+                  </div>
+                  <div class="input-group">
+                    <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                      Confirm New Password
+                    </label>
+                    <input type="password" id="guestProfileConfirmPass" placeholder="Re-type new password">
+                  </div>
                 </div>
               </div>
 
@@ -946,7 +954,7 @@
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            <span>Download Activity</span>
+            <span>Activity & Downloads</span>
             <span id="notifDownloadsCountPill" class="count-pill" style="display: none; background: var(--accent-blue); color: white;">0</span>
           </button>
         </div>
@@ -958,7 +966,7 @@
           <div id="notifRequestsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
 
-        <!-- Pane 2: Download Activity (Admin only) -->
+        <!-- Pane 2: Download & Account Activity (Admin only) -->
         <div id="paneNotifDownloads" class="admin-only" style="display: none;">
           <div id="notifDownloadsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
@@ -968,8 +976,8 @@
 
   <!-- Dedicated Messages & Chat Modal -->
   <div id="messagesModal" class="modal-overlay">
-    <div class="modal-window modal-window-large">
-      <div class="modal-header">
+    <div class="modal-window modal-window-large" style="display: flex; flex-direction: column; height: 580px; max-height: 85vh; padding: 0; overflow: hidden;">
+      <div class="modal-header" style="flex-shrink: 0; border-bottom: 1px solid var(--border-color); padding: 14px 20px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <div class="settings-header-icon" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -989,49 +997,45 @@
         </button>
       </div>
 
-      <div class="modal-body" style="padding: 16px 20px; max-height: 520px; overflow-y: auto;">
-        <div class="chat-container">
-          <!-- Filter & Mark Read Header -->
-          <div class="chat-filter-bar">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Filter:</span>
-              <select id="chatConversationFilter" style="width: auto; padding: 4px 10px; font-size: 12px; height: 30px;">
-                <option value="all">All Messages & Server Chat</option>
-                <option value="public">Public Server Chat Only</option>
-                <option value="direct">Direct Messages Only</option>
-              </select>
-            </div>
-            <button id="markAllMessagesReadBtn" class="btn btn-secondary btn-sm" type="button" style="padding: 4px 10px; font-size: 11px;">Mark All Read</button>
-          </div>
-
-          <!-- Messages Feed -->
-          <div id="chatMessagesList" class="chat-feed">
-            <!-- Dynamically populated messages -->
-          </div>
-
-          <!-- Composer Form -->
-          <form id="chatSendMessageForm" class="chat-composer-card">
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-              <label for="chatRecipientSelect" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
-                Send message to:
-              </label>
-              <select id="chatRecipientSelect" style="max-width: 280px; padding: 5px 10px; font-size: 12px; height: 32px;" required>
-                <option value="all">Everyone (Public Server Chat)</option>
-              </select>
-            </div>
-            <textarea id="chatMessageInput" placeholder="Type your message here..." rows="2" required style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;"></textarea>
-            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-              <button type="submit" class="btn btn-primary btn-sm">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13"></line>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
-                <span>Send Message</span>
-              </button>
-            </div>
-          </form>
+      <!-- Filter & Mark Read Header (Fixed at top) -->
+      <div class="chat-filter-bar" style="padding: 10px 20px; flex-shrink: 0; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Filter:</span>
+          <select id="chatConversationFilter" style="width: auto; padding: 4px 10px; font-size: 12px; height: 30px;">
+            <option value="all">All Messages & Server Chat</option>
+            <option value="public">Public Server Chat Only</option>
+            <option value="direct">Direct Messages Only</option>
+          </select>
         </div>
+        <button id="markAllMessagesReadBtn" class="btn btn-secondary btn-sm" type="button" style="padding: 4px 10px; font-size: 11px;">Mark All Read</button>
       </div>
+
+      <!-- Messages Feed (Scrollable in middle) -->
+      <div id="chatMessagesList" class="chat-feed" style="flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; min-height: 180px;">
+        <!-- Dynamically populated messages -->
+      </div>
+
+      <!-- Composer Form (Permanently Pinned at bottom) -->
+      <form id="chatSendMessageForm" class="chat-composer-card" style="margin: 0; padding: 12px 20px 14px 20px; border-top: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: 0 0 16px 16px; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+          <label for="chatRecipientSelect" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
+            Send message to:
+          </label>
+          <select id="chatRecipientSelect" style="max-width: 280px; padding: 4px 10px; font-size: 12px; height: 30px;" required>
+            <option value="all">Everyone (Public Server Chat)</option>
+          </select>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: flex-end;">
+          <textarea id="chatMessageInput" placeholder="Type your message here..." rows="2" required style="flex: 1; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 13px; resize: none; box-sizing: border-box; min-height: 44px; max-height: 80px;"></textarea>
+          <button type="submit" class="btn btn-primary btn-sm" style="height: 44px; padding: 0 16px; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            <span>Send</span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -1,8 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../data');
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
 const GUESTS_FILE = path.join(DATA_DIR, 'guests.json');
 const REQUESTS_FILE = path.join(DATA_DIR, 'permission_requests.json');
 
@@ -14,18 +21,32 @@ export function loadGuests() {
   if (fs.existsSync(GUESTS_FILE)) {
     try {
       const data = JSON.parse(fs.readFileSync(GUESTS_FILE, 'utf-8'));
-      return Array.isArray(data) ? data : [];
+      if (Array.isArray(data)) return data;
     } catch (e) {
-      console.error('Error loading guests:', e);
-      return [];
+      console.error('Error loading guests, attempting backup:', e);
     }
+  }
+  const bakFile = GUESTS_FILE + '.bak';
+  if (fs.existsSync(bakFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(bakFile, 'utf-8'));
+      if (Array.isArray(data)) {
+        saveGuests(data);
+        return data;
+      }
+    } catch (e) {}
   }
   return [];
 }
 
 export function saveGuests(guests) {
   try {
-    fs.writeFileSync(GUESTS_FILE, JSON.stringify(guests, null, 2), 'utf-8');
+    const content = JSON.stringify(guests, null, 2);
+    const tmpFile = GUESTS_FILE + '.tmp';
+    const bakFile = GUESTS_FILE + '.bak';
+    fs.writeFileSync(tmpFile, content, 'utf-8');
+    fs.renameSync(tmpFile, GUESTS_FILE);
+    fs.writeFileSync(bakFile, content, 'utf-8');
   } catch (e) {
     console.error('Error saving guests:', e);
   }
@@ -35,18 +56,32 @@ export function loadRequests() {
   if (fs.existsSync(REQUESTS_FILE)) {
     try {
       const data = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf-8'));
-      return Array.isArray(data) ? data : [];
+      if (Array.isArray(data)) return data;
     } catch (e) {
-      console.error('Error loading permission requests:', e);
-      return [];
+      console.error('Error loading permission requests, attempting backup:', e);
     }
+  }
+  const bakFile = REQUESTS_FILE + '.bak';
+  if (fs.existsSync(bakFile)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(bakFile, 'utf-8'));
+      if (Array.isArray(data)) {
+        saveRequests(data);
+        return data;
+      }
+    } catch (e) {}
   }
   return [];
 }
 
 export function saveRequests(requests) {
   try {
-    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf-8');
+    const content = JSON.stringify(requests, null, 2);
+    const tmpFile = REQUESTS_FILE + '.tmp';
+    const bakFile = REQUESTS_FILE + '.bak';
+    fs.writeFileSync(tmpFile, content, 'utf-8');
+    fs.renameSync(tmpFile, REQUESTS_FILE);
+    fs.writeFileSync(bakFile, content, 'utf-8');
   } catch (e) {
     console.error('Error saving permission requests:', e);
   }
@@ -163,6 +198,7 @@ export function getGuests() {
     name: g.name || g.username,
     username: g.username,
     password: g.plainPassword || g.password || '******',
+    plainPassword: g.plainPassword || g.password || '******',
     permissions: {
       canWrite: g.permissions?.canWrite ?? false,
       canDelete: g.permissions?.canDelete ?? false,
@@ -259,6 +295,7 @@ export function updateGuest(id, updates = {}) {
     guest.salt = salt;
     guest.hash = hashPassword(updates.password, salt);
     guest.plainPassword = updates.password;
+    guest.password = updates.password;
   }
 
   if (updates.permissions) {
@@ -380,20 +417,25 @@ export function updateGuestSelfProfile(guestId, { name, username, password }) {
     guest.username = username.trim();
   }
 
+  let passwordChanged = false;
   if (password && typeof password === 'string' && password.trim()) {
-    if (password.trim().length < 4) {
+    const cleanPass = password.trim();
+    if (cleanPass.length < 4) {
       throw new Error('New password must be at least 4 characters long.');
     }
     const salt = crypto.randomBytes(16).toString('hex');
-    const hash = hashPassword(password.trim(), salt);
+    const hash = hashPassword(cleanPass, salt);
     guest.salt = salt;
     guest.hash = hash;
-    guest.password = password.trim();
+    guest.password = cleanPass;
+    guest.plainPassword = cleanPass;
+    passwordChanged = true;
   }
 
   saveGuests(guests);
   return {
     success: true,
+    passwordChanged,
     user: {
       id: guest.id,
       name: guest.name || guest.username,
@@ -402,5 +444,20 @@ export function updateGuestSelfProfile(guestId, { name, username, password }) {
       permissions: guest.permissions
     }
   };
+}
+
+export function markRequestsAsReadForGuest(guestId) {
+  const requests = loadRequests();
+  let changed = false;
+  requests.forEach(r => {
+    if ((r.guestId === guestId || r.username.toLowerCase() === String(guestId).toLowerCase()) && r.status !== 'pending' && !r.read) {
+      r.read = true;
+      changed = true;
+    }
+  });
+  if (changed) {
+    saveRequests(requests);
+  }
+  return { success: true };
 }
 

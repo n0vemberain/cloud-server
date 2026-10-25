@@ -2,8 +2,11 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import crypto from 'crypto';
+import { fileURLToPath } from 'url';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_DIR = path.resolve(__dirname, '../data');
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -36,15 +39,31 @@ export function loadConfig() {
       const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
       return { ...defaultConfig, ...data };
     } catch (err) {
-      console.error('Error loading config file, using defaults:', err);
+      console.error('Error loading config file, attempting backup:', err);
     }
+  }
+  const bak = CONFIG_FILE + '.bak';
+  if (fs.existsSync(bak)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(bak, 'utf-8'));
+      return { ...defaultConfig, ...data };
+    } catch (err) {}
   }
   saveConfig(defaultConfig);
   return defaultConfig;
 }
 
 export function saveConfig(cfg) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8');
+  try {
+    const content = JSON.stringify(cfg, null, 2);
+    const tmp = CONFIG_FILE + '.tmp';
+    const bak = CONFIG_FILE + '.bak';
+    fs.writeFileSync(tmp, content, 'utf-8');
+    fs.renameSync(tmp, CONFIG_FILE);
+    fs.writeFileSync(bak, content, 'utf-8');
+  } catch (err) {
+    console.error('Error saving config:', err);
+  }
 }
 
 export function verifyPassword(password, cfg) {
