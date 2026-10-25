@@ -41,24 +41,43 @@ const storageBarFill = document.getElementById('storageBarFill');
 const folderStatsPill = document.getElementById('folderStatsPill');
 const copyCurrentPathBtn = document.getElementById('copyCurrentPathBtn');
 
-// Notifications & Chat Modal Elements
+// Notifications Modal Elements
 const notifModal = document.getElementById('notifModal');
 const notifBtn = document.getElementById('notifBtn');
 const notifCloseBtn = document.getElementById('notifCloseBtn');
 const notifBadgeCount = document.getElementById('notifBadgeCount');
 const notifTabReqBtn = document.getElementById('notifTabReqBtn');
-const notifTabMsgBtn = document.getElementById('notifTabMsgBtn');
+const notifTabDownloadsBtn = document.getElementById('notifTabDownloadsBtn');
 const notifReqCountPill = document.getElementById('notifReqCountPill');
-const notifMsgCountPill = document.getElementById('notifMsgCountPill');
+const notifDownloadsCountPill = document.getElementById('notifDownloadsCountPill');
 const paneNotifRequests = document.getElementById('paneNotifRequests');
-const paneNotifMessages = document.getElementById('paneNotifMessages');
+const paneNotifDownloads = document.getElementById('paneNotifDownloads');
 const notifRequestsList = document.getElementById('notifRequestsList');
-const markAllReadBtn = document.getElementById('markAllReadBtn');
+const notifDownloadsList = document.getElementById('notifDownloadsList');
+const markAllNotifsReadBtn = document.getElementById('markAllNotifsReadBtn');
+
+// Dedicated Messages & Chat Modal Elements
+const messagesModal = document.getElementById('messagesModal');
+const messagesBtn = document.getElementById('messagesBtn');
+const messagesCloseBtn = document.getElementById('messagesCloseBtn');
+const messagesBadgeCount = document.getElementById('messagesBadgeCount');
+const markAllMessagesReadBtn = document.getElementById('markAllMessagesReadBtn');
 const chatConversationFilter = document.getElementById('chatConversationFilter');
 const chatMessagesList = document.getElementById('chatMessagesList');
 const chatSendMessageForm = document.getElementById('chatSendMessageForm');
 const chatRecipientSelect = document.getElementById('chatRecipientSelect');
 const chatMessageInput = document.getElementById('chatMessageInput');
+
+// Settings Profile Elements
+const adminProfileForm = document.getElementById('adminProfileForm');
+const adminProfileName = document.getElementById('adminProfileName');
+const adminProfileUsername = document.getElementById('adminProfileUsername');
+const adminCurrentPass = document.getElementById('adminCurrentPass');
+const adminNewPass = document.getElementById('adminNewPass');
+const guestProfileForm = document.getElementById('guestProfileForm');
+const guestProfileName = document.getElementById('guestProfileName');
+const guestProfileUsername = document.getElementById('guestProfileUsername');
+const guestProfileNewPass = document.getElementById('guestProfileNewPass');
 
 // Unified Settings Modal Elements
 const settingsModal = document.getElementById('settingsModal');
@@ -656,19 +675,28 @@ function openMediaPreview(item) {
     img.src = streamUrl;
     img.alt = item.name;
     previewContent.appendChild(img);
-  } else if (mime.startsWith('video/')) {
+  } else if (mime.startsWith('video/') || ['.mkv', '.avi', '.wmv', '.flv', '.ts', '.mp4', '.mov', '.webm', '.m4v'].includes(ext)) {
     const video = document.createElement('video');
     video.className = 'preview-video';
     video.controls = true;
-    video.autoplay = true;
     video.playsInline = true;
+    video.preload = 'auto';
+    video.volume = 1.0;
+    video.muted = false;
     video.src = streamUrl;
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {});
+    }
+
     previewContent.appendChild(video);
   } else if (mime.startsWith('audio/')) {
     const audio = document.createElement('audio');
     audio.className = 'preview-audio';
     audio.controls = true;
     audio.autoplay = true;
+    audio.volume = 1.0;
     audio.src = streamUrl;
     previewContent.appendChild(audio);
   } else if (ext === '.pdf') {
@@ -683,6 +711,14 @@ function openMediaPreview(item) {
 
 function closeMediaPreview() {
   previewModal.classList.remove('active');
+  const media = previewContent.querySelector('video, audio');
+  if (media) {
+    try {
+      media.pause();
+      media.removeAttribute('src');
+      media.load();
+    } catch (e) {}
+  }
   previewContent.innerHTML = '';
 }
 
@@ -1099,9 +1135,8 @@ async function loadGuests() {
       if (msgGuestBtn) {
         msgGuestBtn.onclick = () => {
           if (settingsModal) settingsModal.classList.remove('active');
-          openNotifModal('messages');
+          openMessagesModal(g.id);
           setTimeout(() => {
-            if (chatRecipientSelect) chatRecipientSelect.value = g.id;
             if (chatMessageInput) {
               chatMessageInput.focus();
               chatMessageInput.placeholder = `Message to @${g.username}...`;
@@ -1765,7 +1800,7 @@ if (copyRemoteUrlBtn) {
 function switchSettingsTab(tabName) {
   const isAdmin = currentUser?.role === 'admin';
   if (!isAdmin) {
-    if (tabName !== 'remote' && tabName !== 'permissions') {
+    if (tabName !== 'remote' && tabName !== 'permissions' && tabName !== 'profile') {
       tabName = 'remote';
     }
   }
@@ -1794,6 +1829,9 @@ function switchSettingsTab(tabName) {
     loadGuests();
     loadPendingRequests();
   }
+  if (tabName === 'profile') {
+    loadProfile();
+  }
 }
 
 document.querySelectorAll('.settings-tab-btn').forEach(btn => {
@@ -1806,7 +1844,7 @@ function openSettings(tab) {
     if (!tab) {
       tab = isAdmin ? 'general' : 'remote';
     }
-    if (!isAdmin && tab !== 'remote' && tab !== 'permissions') {
+    if (!isAdmin && tab !== 'remote' && tab !== 'permissions' && tab !== 'profile') {
       tab = 'remote';
     }
     settingsModal.classList.add('active');
@@ -1824,35 +1862,91 @@ if (settingsCloseBtn) {
   settingsCloseBtn.onclick = () => settingsModal.classList.remove('active');
 }
 
-changePasswordForm.onsubmit = async (e) => {
-  e.preventDefault();
-  const currentPassword = document.getElementById('currentPassInput').value;
-  const newPassword = document.getElementById('newPassInput').value;
-
+// Settings Profile Logic
+async function loadProfile() {
   try {
-    const res = await fetch('/api/auth/change-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword })
-    });
+    const res = await fetch('/api/profile');
+    if (!res.ok) return;
     const data = await res.json();
-    if (data.success) {
-      settingsMsg.textContent = 'Admin password updated successfully';
-      settingsMsg.style.background = 'rgba(48, 209, 88, 0.2)';
-      settingsMsg.style.color = '#30d158';
-      settingsMsg.style.display = 'block';
-      setTimeout(() => settingsModal.classList.remove('active'), 1500);
+    if (!data.success || !data.user) return;
+
+    if (currentUser?.role === 'admin') {
+      if (adminProfileName) adminProfileName.value = data.user.name || 'Administrator';
+      if (adminProfileUsername) adminProfileUsername.value = data.user.username || 'admin';
+      if (adminCurrentPass) adminCurrentPass.value = '';
+      if (adminNewPass) adminNewPass.value = '';
     } else {
-      settingsMsg.textContent = data.error || 'Failed to update password';
-      settingsMsg.style.background = 'rgba(255, 69, 58, 0.2)';
-      settingsMsg.style.color = '#ff453a';
-      settingsMsg.style.display = 'block';
+      if (guestProfileName) guestProfileName.value = data.user.name || '';
+      if (guestProfileUsername) guestProfileUsername.value = data.user.username || '';
+      if (guestProfileNewPass) guestProfileNewPass.value = '';
     }
-  } catch (err) {
-    settingsMsg.textContent = err.message;
-    settingsMsg.style.display = 'block';
-  }
-};
+  } catch (err) {}
+}
+
+if (adminProfileForm) {
+  adminProfileForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = adminProfileName ? adminProfileName.value.trim() : '';
+    const currentPassword = adminCurrentPass ? adminCurrentPass.value : '';
+    const newPassword = adminNewPass ? adminNewPass.value : '';
+
+    try {
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Admin profile and password updated successfully');
+        if (data.user) {
+          currentUser = { ...currentUser, ...data.user };
+          if (sidebarUserDisplay) {
+            sidebarUserDisplay.textContent = currentUser.name || currentUser.username;
+          }
+        }
+        if (adminCurrentPass) adminCurrentPass.value = '';
+        if (adminNewPass) adminNewPass.value = '';
+      } else {
+        showToast(data.error || 'Failed to update admin profile');
+      }
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+}
+
+if (guestProfileForm) {
+  guestProfileForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = guestProfileName ? guestProfileName.value.trim() : '';
+    const username = guestProfileUsername ? guestProfileUsername.value.trim() : '';
+    const password = guestProfileNewPass ? guestProfileNewPass.value : '';
+
+    try {
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Profile updated successfully');
+        if (data.user) {
+          currentUser = { ...currentUser, ...data.user };
+          if (sidebarUserDisplay) {
+            sidebarUserDisplay.textContent = currentUser.name || currentUser.username;
+          }
+        }
+        if (guestProfileNewPass) guestProfileNewPass.value = '';
+      } else {
+        showToast(data.error || 'Failed to update profile');
+      }
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+}
 
 // Logout
 logoutBtn.onclick = async () => {
@@ -1922,29 +2016,22 @@ searchInput.oninput = (e) => {
   }, 200);
 };
 
-// Notifications & Messages Modal Management
+// Notifications Modal Management
 let activeNotifTab = 'requests';
-let cachedChatMessages = [];
 
 function openNotifModal(tab = 'requests') {
   if (!notifModal) return;
   const isAdmin = currentUser?.role === 'admin';
-  const modalTitle = document.getElementById('notifModalTitle');
-  const modalSubtitle = document.getElementById('notifModalSubtitle');
-
   notifModal.classList.add('active');
 
   if (isAdmin) {
-    if (modalTitle) modalTitle.textContent = 'Notifications & Messages';
-    if (modalSubtitle) modalSubtitle.textContent = 'Permission requests and multi-user chat';
     switchNotifTab(tab || 'requests');
   } else {
-    if (modalTitle) modalTitle.textContent = 'Messages & Chat';
-    if (modalSubtitle) modalSubtitle.textContent = 'Chat with administrator and connected users';
-    if (paneNotifRequests) paneNotifRequests.style.display = 'none';
-    if (paneNotifMessages) paneNotifMessages.style.display = 'block';
-    loadChatRecipients();
-    loadChatMessages();
+    if (paneNotifRequests) paneNotifRequests.style.display = 'block';
+    if (paneNotifDownloads) paneNotifDownloads.style.display = 'none';
+    if (notifRequestsList) {
+      notifRequestsList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 24px 12px; text-align: center; font-style: italic;">No new notifications for your account.</div>';
+    }
   }
   updateNotificationsSummary();
 }
@@ -1957,24 +2044,114 @@ function switchNotifTab(tab) {
   activeNotifTab = tab;
   if (tab === 'requests') {
     if (notifTabReqBtn) notifTabReqBtn.classList.add('active');
-    if (notifTabMsgBtn) notifTabMsgBtn.classList.remove('active');
+    if (notifTabDownloadsBtn) notifTabDownloadsBtn.classList.remove('active');
     if (paneNotifRequests) paneNotifRequests.style.display = 'block';
-    if (paneNotifMessages) paneNotifMessages.style.display = 'none';
+    if (paneNotifDownloads) paneNotifDownloads.style.display = 'none';
     loadPendingRequests();
   } else {
     if (notifTabReqBtn) notifTabReqBtn.classList.remove('active');
-    if (notifTabMsgBtn) notifTabMsgBtn.classList.add('active');
+    if (notifTabDownloadsBtn) notifTabDownloadsBtn.classList.add('active');
     if (paneNotifRequests) paneNotifRequests.style.display = 'none';
-    if (paneNotifMessages) paneNotifMessages.style.display = 'block';
-    loadChatRecipients();
-    loadChatMessages();
+    if (paneNotifDownloads) paneNotifDownloads.style.display = 'block';
+    loadDownloadActivity();
   }
+}
+
+async function loadDownloadActivity() {
+  if (currentUser?.role !== 'admin') return;
+  if (!notifDownloadsList) return;
+  try {
+    const res = await fetch('/api/notifications/downloads');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    notifDownloadsList.innerHTML = '';
+    const downloads = data.downloads || [];
+
+    if (downloads.length === 0) {
+      notifDownloadsList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 24px 12px; text-align: center; font-style: italic;">No file download activity recorded yet.</div>';
+      return;
+    }
+
+    downloads.forEach(dl => {
+      const card = document.createElement('div');
+      card.style.cssText = `display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px; ${!dl.read ? 'border-left: 3px solid var(--accent-blue);' : ''}`;
+
+      const u = dl.user || {};
+      const userDisplay = u.name ? `${escapeHtml(u.name)} (@${escapeHtml(u.username || 'user')})` : `@${escapeHtml(u.username || 'user')}`;
+      const roleBadge = u.role === 'admin'
+        ? '<span class="role-badge admin" style="font-size: 10px;">Admin</span>'
+        : '<span class="role-badge guest" style="font-size: 10px;">Guest</span>';
+
+      const typeLabel = dl.isDirectory ? 'Downloaded Folder (ZIP)' : 'Downloaded File';
+      const sizeStr = formatBytes(dl.fileSize || 0);
+
+      card.innerHTML = `
+        <div style="min-width: 0; flex: 1;">
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
+            ${roleBadge}
+            <span style="font-size: 11px; color: var(--text-secondary);">&bull; ${typeLabel}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--accent-blue); font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 3px;" title="${escapeHtml(dl.filePath || '')}">
+            ${escapeHtml(dl.fileName || dl.filePath || 'File')}
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+            Size: ${sizeStr} &bull; ${formatDate(dl.timestamp)}
+          </div>
+        </div>
+      `;
+      notifDownloadsList.appendChild(card);
+    });
+  } catch (err) {}
 }
 
 if (notifBtn) notifBtn.onclick = () => openNotifModal('requests');
 if (notifCloseBtn) notifCloseBtn.onclick = closeNotifModal;
 if (notifTabReqBtn) notifTabReqBtn.onclick = () => switchNotifTab('requests');
-if (notifTabMsgBtn) notifTabMsgBtn.onclick = () => switchNotifTab('messages');
+if (notifTabDownloadsBtn) notifTabDownloadsBtn.onclick = () => switchNotifTab('downloads');
+if (markAllNotifsReadBtn) {
+  markAllNotifsReadBtn.onclick = async () => {
+    try {
+      if (currentUser?.role === 'admin') {
+        await fetch('/api/notifications/downloads/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        showToast('All notifications marked as read');
+        loadDownloadActivity();
+        updateNotificationsSummary();
+      }
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
+}
+
+// Dedicated Messages & Chat Management
+let cachedChatMessages = [];
+
+function openMessagesModal(recipientId = null) {
+  if (!messagesModal) return;
+  messagesModal.classList.add('active');
+  loadChatRecipients().then(() => {
+    if (recipientId && chatRecipientSelect) {
+      chatRecipientSelect.value = recipientId;
+      if (chatMessageInput) chatMessageInput.focus();
+    }
+  });
+  loadChatMessages();
+  updateNotificationsSummary();
+}
+
+function closeMessagesModal() {
+  if (messagesModal) messagesModal.classList.remove('active');
+}
+
+if (messagesBtn) messagesBtn.onclick = () => openMessagesModal();
+if (messagesCloseBtn) messagesCloseBtn.onclick = closeMessagesModal;
 
 async function updateNotificationsSummary() {
   try {
@@ -1983,13 +2160,25 @@ async function updateNotificationsSummary() {
     const data = await res.json();
     if (!data.success) return;
 
-    const totalUnread = data.totalUnread || 0;
+    // Notifications Badge (Bell Icon)
+    const notifCount = data.totalNotifications || 0;
     if (notifBadgeCount) {
-      if (totalUnread > 0) {
-        notifBadgeCount.textContent = totalUnread > 99 ? '99+' : totalUnread;
+      if (notifCount > 0) {
+        notifBadgeCount.textContent = notifCount > 99 ? '99+' : notifCount;
         notifBadgeCount.style.display = 'inline-flex';
       } else {
         notifBadgeCount.style.display = 'none';
+      }
+    }
+
+    // Messages Badge (Chat Bubble Icon)
+    const msgCount = data.unreadMessagesCount || 0;
+    if (messagesBadgeCount) {
+      if (msgCount > 0) {
+        messagesBadgeCount.textContent = msgCount > 99 ? '99+' : msgCount;
+        messagesBadgeCount.style.display = 'inline-flex';
+      } else {
+        messagesBadgeCount.style.display = 'none';
       }
     }
 
@@ -2003,13 +2192,13 @@ async function updateNotificationsSummary() {
       }
     }
 
-    if (notifMsgCountPill) {
-      const mCount = data.unreadMessagesCount || 0;
-      if (mCount > 0) {
-        notifMsgCountPill.textContent = mCount;
-        notifMsgCountPill.style.display = 'inline-flex';
+    if (notifDownloadsCountPill) {
+      const dCount = data.unreadDownloadsCount || 0;
+      if (dCount > 0) {
+        notifDownloadsCountPill.textContent = dCount;
+        notifDownloadsCountPill.style.display = 'inline-flex';
       } else {
-        notifMsgCountPill.style.display = 'none';
+        notifDownloadsCountPill.style.display = 'none';
       }
     }
   } catch (err) {}
@@ -2190,8 +2379,8 @@ if (chatConversationFilter) {
   };
 }
 
-if (markAllReadBtn) {
-  markAllReadBtn.onclick = async () => {
+if (markAllMessagesReadBtn) {
+  markAllMessagesReadBtn.onclick = async () => {
     try {
       const res = await fetch('/api/messages/read', {
         method: 'POST',
@@ -2255,6 +2444,7 @@ window.addEventListener('keydown', (e) => {
     closeMediaPreview();
     if (settingsModal) settingsModal.classList.remove('active');
     if (notifModal) notifModal.classList.remove('active');
+    if (messagesModal) messagesModal.classList.remove('active');
     closeEditGuestModal();
     closePrompt();
     closeItemActionSheet();
@@ -2310,12 +2500,17 @@ async function init() {
   }, 6000);
   setInterval(() => {
     if (notifModal && notifModal.classList.contains('active')) {
-      if (paneNotifMessages && paneNotifMessages.style.display !== 'none') {
-        loadChatMessages();
+      if (currentUser?.role === 'admin') {
+        if (paneNotifRequests && paneNotifRequests.style.display !== 'none') {
+          loadPendingRequests();
+        }
+        if (paneNotifDownloads && paneNotifDownloads.style.display !== 'none') {
+          loadDownloadActivity();
+        }
       }
-      if (currentUser?.role === 'admin' && paneNotifRequests && paneNotifRequests.style.display !== 'none') {
-        loadPendingRequests();
-      }
+    }
+    if (messagesModal && messagesModal.classList.contains('active')) {
+      loadChatMessages();
     }
   }, 4000);
 }

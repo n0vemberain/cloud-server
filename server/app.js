@@ -5,7 +5,7 @@ import fs from 'fs';
 import multer from 'multer';
 import QRCode from 'qrcode';
 
-import { loadConfig, updateServerName } from './config.js';
+import { loadConfig, updateServerName, updateAdminProfile } from './config.js';
 import {
   authMiddleware,
   requireAdmin,
@@ -13,7 +13,8 @@ import {
   handleLogin,
   handleLogout,
   handleAuthStatus,
-  handleChangePassword
+  handleChangePassword,
+  generateToken
 } from './auth.js';
 import {
   listDirectory,
@@ -37,6 +38,7 @@ import {
   updateGuest,
   updateGuestPassword,
   updateGuestPermissions,
+  updateGuestSelfProfile,
   getMyRequests,
   getPendingRequests,
   createPermissionRequest,
@@ -52,6 +54,12 @@ import {
   getUnreadMessagesCount,
   getChatRecipients
 } from './messageManager.js';
+import {
+  getDownloadActivities,
+  getUnreadDownloadsCount,
+  markDownloadsAsRead,
+  clearDownloadActivities
+} from './notificationManager.js';
 
 export function createApp() {
   const app = express();
@@ -311,35 +319,149 @@ export function createApp() {
   app.get('/api/notifications/summary', authMiddleware, (req, res) => {
     try {
       const isAdmin = req.user?.role === 'admin';
+      const unreadMsgCount = getUnreadMessagesCount(req.user);
       if (isAdmin) {
         const pending = getPendingRequests();
-        const unreadCount = getUnreadMessagesCount(req.user);
+        const unreadDownloads = getUnreadDownloadsCount();
+        const downloads = getDownloadActivities();
         const allMessages = getMessagesForUser(req.user);
+        const totalNotifications = pending.length + unreadDownloads;
         return res.json({
           success: true,
           isAdmin: true,
           pendingRequests: pending,
-          pendingCount: pending.length,
-          unreadMessagesCount: unreadCount,
-          totalUnread: pending.length + unreadCount,
+          pendingRequestsCount: pending.length,
+          unreadDownloadsCount: unreadDownloads,
+          downloads: downloads.slice(0, 50),
+          totalNotifications,
+          unreadMessagesCount: unreadMsgCount,
+          totalUnread: totalNotifications + unreadMsgCount,
           messages: allMessages
         });
       } else {
         const guestId = req.user?.id || req.user?.username;
         const myRequests = getMyRequests(guestId);
         const myMessages = getMessagesForUser(req.user);
-        const unreadCount = getUnreadMessagesCount(req.user);
+        const unreadRequests = myRequests.filter(r => r.status !== 'pending' && !r.read).length;
         return res.json({
           success: true,
           isAdmin: false,
           requests: myRequests,
-          unreadMessagesCount: unreadCount,
-          totalUnread: unreadCount,
+          totalNotifications: unreadRequests,
+          unreadMessagesCount: unreadMsgCount,
+          totalUnread: unreadRequests + unreadMsgCount,
           messages: myMessages
         });
       }
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/notifications/downloads', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const downloads = getDownloadActivities();
+      res.json({ success: true, downloads });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/notifications/downloads/read', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const { downloadId } = req.body;
+      const result = markDownloadsAsRead(downloadId);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  // ---------------- USER PROFILE ROUTES ----------------
+  app.get('/api/profile', authMiddleware, (req, res) => {
+    try {
+      const cfg = loadConfig();
+      const isAdmin = req.user?.role === 'admin';
+      if (isAdmin) {
+        const userObj = {
+          role: 'admin',
+          id: 'admin',
+          username: 'admin',
+          name: cfg.adminName || 'Administrator',
+          serverName: cfg.serverName
+        };
+        return res.json({
+          success: true,
+          user: userObj,
+          profile: userObj
+        });
+      } else {
+        const allGuests = getGuests();
+        const currentGuest = allGuests.find(g => g.id === req.user.id || g.username.toLowerCase() === (req.user.username || '').toLowerCase());
+        const userObj = {
+          role: 'guest',
+          id: currentGuest ? currentGuest.id : req.user.id,
+          username: currentGuest ? currentGuest.username : req.user.username,
+          name: currentGuest ? (currentGuest.name || currentGuest.username) : req.user.name,
+          serverName: cfg.serverName
+        };
+        return res.json({
+          success: true,
+          user: userObj,
+          profile: userObj
+        });
+      }
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/profile/update', authMiddleware, (req, res) => {
+    try {
+      const cfg = loadConfig();
+      const isAdmin = req.user?.role === 'admin';
+
+      if (isAdmin) {
+        const { name, currentPassword, newPassword } = req.body;
+        const result = updateAdminProfile(name, currentPassword, newPassword, cfg);
+        req.user.name = result.adminName;
+        const { token } = generateToken(req.user, cfg);
+        res.cookie('mac_token', token, {
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000
+        });
+        return res.json({
+          success: true,
+          message: 'Admin profile updated successfully',
+          user: {
+            role: 'admin',
+            username: 'admin',
+            name: result.adminName
+          }
+        });
+      } else {
+        const guestId = req.user?.id || req.user?.username;
+        const { name, username, password } = req.body;
+        const result = updateGuestSelfProfile(guestId, { name, username, password });
+        req.user.name = result.user.name;
+        req.user.username = result.user.username;
+        const { token } = generateToken(result.user, cfg);
+        res.cookie('mac_token', token, {
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000
+        });
+        return res.json({
+          success: true,
+          message: 'Profile updated successfully',
+          user: result.user
+        });
+      }
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
     }
   });
 

@@ -71,3 +71,28 @@ export function updateServerName(newName, cfg) {
   return cfg.serverName;
 }
 
+export function updateAdminProfile(name, currentPassword, newPassword, cfg) {
+  if (name && typeof name === 'string' && name.trim()) {
+    cfg.adminName = name.trim();
+  }
+  if (newPassword && newPassword.trim()) {
+    if (!currentPassword) {
+      throw new Error('Current password is required to set a new password.');
+    }
+    if (!verifyPassword(currentPassword, cfg)) {
+      throw new Error('Current admin password is incorrect.');
+    }
+    if (newPassword.trim().length < 4) {
+      throw new Error('New password must be at least 4 characters long.');
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = hashPassword(newPassword.trim(), salt);
+    cfg.passwordSalt = salt;
+    cfg.passwordHash = hash;
+    cfg.isConfigured = true;
+  }
+  saveConfig(cfg);
+  return { success: true, adminName: cfg.adminName || 'Administrator' };
+}
+
+

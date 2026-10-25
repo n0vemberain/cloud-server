@@ -356,3 +356,51 @@ export function authenticateUser(username, password, adminConfig) {
 
   return { success: false, error: 'Invalid password.' };
 }
+
+export function updateGuestSelfProfile(guestId, { name, username, password }) {
+  const guests = loadGuests();
+  const guest = guests.find(g => g.id === guestId || g.username.toLowerCase() === String(guestId).toLowerCase());
+  if (!guest) {
+    throw new Error('Guest profile not found.');
+  }
+
+  if (name && typeof name === 'string' && name.trim()) {
+    guest.name = name.trim();
+  }
+
+  if (username && typeof username === 'string' && username.trim()) {
+    const cleanUsername = username.trim().toLowerCase();
+    if (cleanUsername === 'admin') {
+      throw new Error('Username "admin" is reserved.');
+    }
+    const existing = guests.find(g => g.id !== guest.id && g.username.toLowerCase() === cleanUsername);
+    if (existing) {
+      throw new Error(`Username "${username}" is already taken by another account.`);
+    }
+    guest.username = username.trim();
+  }
+
+  if (password && typeof password === 'string' && password.trim()) {
+    if (password.trim().length < 4) {
+      throw new Error('New password must be at least 4 characters long.');
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = hashPassword(password.trim(), salt);
+    guest.salt = salt;
+    guest.hash = hash;
+    guest.password = password.trim();
+  }
+
+  saveGuests(guests);
+  return {
+    success: true,
+    user: {
+      id: guest.id,
+      name: guest.name || guest.username,
+      username: guest.username,
+      role: 'guest',
+      permissions: guest.permissions
+    }
+  };
+}
+

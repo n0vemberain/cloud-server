@@ -85,12 +85,19 @@
           <span class="btn-label-desktop">New File</span>
         </button>
 
-        <button id="notifBtn" class="icon-btn-ghost notif-btn" title="Notifications & Messages" style="position: relative;">
+        <button id="notifBtn" class="icon-btn-ghost notif-btn" title="Notifications" style="position: relative;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
           </svg>
           <span id="notifBadgeCount" class="notif-badge-pill" style="display: none;">0</span>
+        </button>
+
+        <button id="messagesBtn" class="icon-btn-ghost notif-btn" title="Messages & Chat" style="position: relative;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span id="messagesBadgeCount" class="notif-badge-pill" style="display: none; background: var(--accent-blue);">0</span>
         </button>
 
         <button id="settingsBtn" class="icon-btn-ghost" title="Settings & Activity">
@@ -437,12 +444,12 @@
           <span id="pendingRequestsCountPill" class="count-pill" style="display: none; background: var(--accent-orange); color: white;">0</span>
         </button>
 
-        <button class="settings-tab-btn admin-only" data-tab="security">
+        <button class="settings-tab-btn" data-tab="profile">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
           </svg>
-          <span>Security</span>
+          <span>Profile</span>
         </button>
       </div>
 
@@ -676,26 +683,91 @@
           </div>
         </div>
 
-        <!-- Tab 5: Security / Master Password -->
-        <div id="paneSecurity" class="settings-tab-pane admin-only" style="display: none;">
-          <div class="settings-card">
-            <h4 class="settings-card-title">Change Master Admin Password</h4>
-            <p class="settings-card-desc">Update the master administrator password used to log in and manage this server.</p>
-            <form id="changePasswordForm" style="margin-top: 14px;">
-              <div class="input-group" style="margin-bottom: 14px;">
-                <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-                  Current Admin Password
-                </label>
-                <input type="password" id="currentPassInput" placeholder="Default: mac1234">
+        <!-- Tab 5: Profile (Admin & Guest) -->
+        <div id="paneProfile" class="settings-tab-pane" style="display: none;">
+          <!-- Admin Profile View -->
+          <div id="adminProfileCard" class="settings-card admin-only">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div>
+                <h4 class="settings-card-title" style="margin-bottom: 2px;">Administrator Profile</h4>
+                <p class="settings-card-desc">View and update your administrator credentials and master password.</p>
               </div>
-              <div class="input-group" style="margin-bottom: 14px;">
-                <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-                  New Admin Password
-                </label>
-                <input type="password" id="newPassInput" required minlength="4" placeholder="Minimum 4 characters">
+              <span class="role-badge admin">Master Admin</span>
+            </div>
+            <form id="adminProfileForm">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div class="input-group">
+                  <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                    Admin Display Name
+                  </label>
+                  <input type="text" id="adminProfileName" required placeholder="Administrator">
+                </div>
+                <div class="input-group">
+                  <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                    User ID / Username
+                  </label>
+                  <input type="text" id="adminProfileUsername" value="admin" readonly disabled style="opacity: 0.8; cursor: not-allowed; background: var(--bg-tertiary);">
+                </div>
               </div>
-              <div id="settingsMsg" style="display: none; font-size: 13px; padding: 10px; border-radius: 8px; margin-bottom: 14px;"></div>
-              <button type="submit" class="btn btn-primary">Update Master Password</button>
+
+              <div style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 14px;">
+                <h5 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Change Password</h5>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                  <div class="input-group">
+                    <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                      Current Admin Password
+                    </label>
+                    <input type="password" id="adminCurrentPass" placeholder="Current password">
+                  </div>
+                  <div class="input-group">
+                    <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                      New Admin Password
+                    </label>
+                    <input type="password" id="adminNewPass" placeholder="Leave blank to keep unchanged">
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm">Update Profile & Password</button>
+            </form>
+          </div>
+
+          <!-- Guest Profile View -->
+          <div id="guestProfileCard" class="settings-card guest-only">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <div>
+                <h4 class="settings-card-title" style="margin-bottom: 2px;">My Guest Profile</h4>
+                <p class="settings-card-desc">Update your display name, username, and account password.</p>
+              </div>
+              <span class="role-badge guest">Guest User</span>
+            </div>
+            <form id="guestProfileForm">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+                <div class="input-group">
+                  <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                    Full Name
+                  </label>
+                  <input type="text" id="guestProfileName" required placeholder="Your Name">
+                </div>
+                <div class="input-group">
+                  <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                    Username / User ID
+                  </label>
+                  <input type="text" id="guestProfileUsername" required placeholder="username">
+                </div>
+              </div>
+
+              <div style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 14px;">
+                <h5 style="font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">Change Password</h5>
+                <div class="input-group" style="margin-bottom: 14px;">
+                  <label style="font-size: 12px; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                    New Password
+                  </label>
+                  <input type="password" id="guestProfileNewPass" placeholder="Leave blank to keep current password">
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm">Save Profile Changes</button>
             </form>
           </div>
         </div>
@@ -831,31 +903,34 @@
     </div>
   </div>
 
-  <!-- Notifications & Messages Modal -->
+  <!-- Notifications Modal (Permission Requests & Download Activity) -->
   <div id="notifModal" class="modal-overlay">
     <div class="modal-window modal-window-large">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="settings-header-icon" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue);">
+          <div class="settings-header-icon" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
             </svg>
           </div>
           <div>
-            <h3 id="notifModalTitle" style="font-size: 15px; font-weight: 600;">Notifications & Messages</h3>
-            <div id="notifModalSubtitle" style="font-size: 11px; color: var(--text-secondary);">Permission requests and direct messages</div>
+            <h3 id="notifModalTitle" style="font-size: 15px; font-weight: 600;">Notifications</h3>
+            <div id="notifModalSubtitle" style="font-size: 11px; color: var(--text-secondary);">Permission requests and user file downloads</div>
           </div>
         </div>
-        <button id="notifCloseBtn" class="icon-btn-ghost" type="button" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="markAllNotifsReadBtn" class="btn btn-secondary btn-sm" type="button" style="padding: 4px 10px; font-size: 11px;">Mark All Read</button>
+          <button id="notifCloseBtn" class="icon-btn-ghost" type="button" aria-label="Close Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Admin Tab Switcher -->
+      <!-- Admin Tabs: Permission Requests / Download Activity -->
       <div id="adminNotifTabs" class="admin-only">
         <div class="settings-nav-tabs" style="padding: 0 20px;">
           <button class="settings-tab-btn active" id="notifTabReqBtn" type="button">
@@ -865,65 +940,96 @@
             <span>Permission Requests</span>
             <span id="notifReqCountPill" class="count-pill" style="display: none; background: var(--accent-orange); color: white;">0</span>
           </button>
-          <button class="settings-tab-btn" id="notifTabMsgBtn" type="button">
+          <button class="settings-tab-btn" id="notifTabDownloadsBtn" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            <span>Messages & Chat</span>
-            <span id="notifMsgCountPill" class="count-pill" style="display: none; background: var(--accent-blue); color: white;">0</span>
+            <span>Download Activity</span>
+            <span id="notifDownloadsCountPill" class="count-pill" style="display: none; background: var(--accent-blue); color: white;">0</span>
           </button>
         </div>
       </div>
 
       <div class="modal-body" style="padding: 16px 20px; max-height: 520px; overflow-y: auto;">
-        <!-- Pane 1: Permission Requests (Admin Only) -->
-        <div id="paneNotifRequests" class="admin-only">
+        <!-- Pane 1: Permission Requests -->
+        <div id="paneNotifRequests">
           <div id="notifRequestsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
         </div>
 
-        <!-- Pane 2: Messages & Chat (Used by both Admin and Guests) -->
-        <div id="paneNotifMessages">
-          <div class="chat-container">
-            <!-- Filter & Mark Read Header -->
-            <div class="chat-filter-bar">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Filter:</span>
-                <select id="chatConversationFilter" style="width: auto; padding: 4px 10px; font-size: 12px; height: 30px;">
-                  <option value="all">All Messages & Server Chat</option>
-                  <option value="public">Public Server Chat Only</option>
-                  <option value="direct">Direct Messages Only</option>
-                </select>
-              </div>
-              <button id="markAllReadBtn" class="btn btn-secondary btn-sm" type="button" style="padding: 4px 10px; font-size: 11px;">Mark All Read</button>
-            </div>
+        <!-- Pane 2: Download Activity (Admin only) -->
+        <div id="paneNotifDownloads" class="admin-only" style="display: none;">
+          <div id="notifDownloadsList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            <!-- Messages Feed -->
-            <div id="chatMessagesList" class="chat-feed">
-              <!-- Dynamically populated messages -->
-            </div>
-
-            <!-- Composer Form -->
-            <form id="chatSendMessageForm" class="chat-composer-card">
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                <label for="chatRecipientSelect" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
-                  Send message to:
-                </label>
-                <select id="chatRecipientSelect" style="max-width: 280px; padding: 5px 10px; font-size: 12px; height: 32px;" required>
-                  <option value="all">Everyone (Public Server Chat)</option>
-                </select>
-              </div>
-              <textarea id="chatMessageInput" placeholder="Type your message here..." rows="2" required style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;"></textarea>
-              <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-                <button type="submit" class="btn btn-primary btn-sm">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                  <span>Send Message</span>
-                </button>
-              </div>
-            </form>
+  <!-- Dedicated Messages & Chat Modal -->
+  <div id="messagesModal" class="modal-overlay">
+    <div class="modal-window modal-window-large">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="settings-header-icon" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
           </div>
+          <div>
+            <h3 style="font-size: 15px; font-weight: 600;">Messages & Chat</h3>
+            <div style="font-size: 11px; color: var(--text-secondary);">Direct messaging and public server chat</div>
+          </div>
+        </div>
+        <button id="messagesCloseBtn" class="icon-btn-ghost" type="button" aria-label="Close Messages">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px; max-height: 520px; overflow-y: auto;">
+        <div class="chat-container">
+          <!-- Filter & Mark Read Header -->
+          <div class="chat-filter-bar">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">Filter:</span>
+              <select id="chatConversationFilter" style="width: auto; padding: 4px 10px; font-size: 12px; height: 30px;">
+                <option value="all">All Messages & Server Chat</option>
+                <option value="public">Public Server Chat Only</option>
+                <option value="direct">Direct Messages Only</option>
+              </select>
+            </div>
+            <button id="markAllMessagesReadBtn" class="btn btn-secondary btn-sm" type="button" style="padding: 4px 10px; font-size: 11px;">Mark All Read</button>
+          </div>
+
+          <!-- Messages Feed -->
+          <div id="chatMessagesList" class="chat-feed">
+            <!-- Dynamically populated messages -->
+          </div>
+
+          <!-- Composer Form -->
+          <form id="chatSendMessageForm" class="chat-composer-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+              <label for="chatRecipientSelect" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                Send message to:
+              </label>
+              <select id="chatRecipientSelect" style="max-width: 280px; padding: 5px 10px; font-size: 12px; height: 32px;" required>
+                <option value="all">Everyone (Public Server Chat)</option>
+              </select>
+            </div>
+            <textarea id="chatMessageInput" placeholder="Type your message here..." rows="2" required style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 12px; font-family: inherit; font-size: 13px; resize: vertical; box-sizing: border-box;"></textarea>
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <span>Send Message</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
