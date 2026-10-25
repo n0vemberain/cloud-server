@@ -524,7 +524,7 @@ textarea:focus {
 
 /* Content Toolbar */
 .content-toolbar {
-  height: 48px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -532,6 +532,30 @@ textarea:focus {
   border-bottom: 1px solid var(--border-glass);
   gap: 12px;
   flex-shrink: 0;
+  background: var(--bg-primary);
+}
+.toolbar-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+.toolbar-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.copy-path-btn {
+  padding: 4px 9px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .breadcrumbs-bar {
   display: flex;
@@ -568,8 +592,13 @@ textarea:focus {
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
+}
+.toolbar-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .sort-dropdown {
   width: auto;
@@ -579,6 +608,7 @@ textarea:focus {
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
+  font-size: 12px;
 }
 
 /* File explorer view */
@@ -1466,11 +1496,114 @@ textarea:focus {
   .header-right {
     gap: 4px;
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+  }
+  .header-right .write-only {
+    display: none !important;
   }
   .header-right .icon-btn-ghost {
     min-width: 32px;
     min-height: 32px;
     padding: 5px;
+  }
+
+  /* Content Toolbar on Mobile - Clean 2-Tier Stack */
+  .content-toolbar {
+    height: auto !important;
+    min-height: 44px;
+    padding: 8px 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    border-bottom: 1px solid var(--border-glass);
+    flex-shrink: 0;
+    background: var(--bg-primary);
+  }
+
+  .toolbar-nav-group {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 8px !important;
+  }
+
+  .breadcrumbs-bar {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
+    padding-bottom: 2px !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  .breadcrumbs-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .toolbar-nav-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .folder-stats-pill {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+    white-space: nowrap !important;
+  }
+
+  .copy-path-btn {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    height: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+  }
+
+  .toolbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 8px !important;
+    padding-top: 6px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  }
+
+  .toolbar-icon-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .toolbar-icon-group .icon-btn-ghost {
+    min-width: 34px !important;
+    min-height: 34px !important;
+    padding: 6px !important;
+    border-radius: 8px !important;
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-glass) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .sort-dropdown {
+    height: 34px !important;
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border-glass) !important;
+    max-width: 130px !important;
   }
   .app-sidebar {
     position: fixed;
@@ -1569,6 +1702,13 @@ textarea:focus {
   }
   .settings-tab-btn span {
     font-size: 11px;
+  }
+  .copy-path-btn .copy-path-text {
+    display: none;
+  }
+  .copy-path-btn {
+    padding: 6px !important;
+    min-width: 28px !important;
   }
 }
 

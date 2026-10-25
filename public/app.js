@@ -143,6 +143,9 @@ const logoutBtn = document.getElementById('logoutBtn');
 const menuToggleBtn = document.getElementById('menuToggleBtn');
 const appSidebar = document.getElementById('appSidebar');
 const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+const sidebarUserDisplay = document.getElementById('sidebarUserDisplay');
+const sidebarUserRole = document.getElementById('sidebarUserRole');
+const sidebarUserAvatar = document.getElementById('sidebarUserAvatar');
 const toastContainer = document.getElementById('toastContainer');
 
 const mobileUploadBtn = document.getElementById('mobileUploadBtn');
@@ -247,9 +250,28 @@ function isMedia(item) {
   return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/') || ext === '.pdf';
 }
 
+// Helper to update User Profile details in the UI
+function updateUserProfileDisplay(user) {
+  if (!user) return;
+  const disp = document.getElementById('sidebarUserDisplay');
+  const role = document.getElementById('sidebarUserRole');
+  const avatar = document.getElementById('sidebarUserAvatar');
+  if (disp) {
+    disp.textContent = user.name || user.username || 'User';
+  }
+  if (role) {
+    role.textContent = user.role === 'admin' ? 'Administrator' : `@${user.username}`;
+  }
+  if (avatar) {
+    const initial = (user.name || user.username || 'U')[0].toUpperCase();
+    avatar.textContent = initial;
+  }
+}
+
 // Apply User Role Permissions to UI
 function applyUserPermissions(user) {
   currentUser = user;
+  updateUserProfileDisplay(user);
   const isAdmin = user?.role === 'admin';
   const perms = user?.permissions || {};
 
@@ -1903,9 +1925,7 @@ if (adminProfileForm) {
         showToast('Admin profile and password updated successfully');
         if (data.user) {
           currentUser = { ...currentUser, ...data.user };
-          if (sidebarUserDisplay) {
-            sidebarUserDisplay.textContent = currentUser.name || currentUser.username;
-          }
+          updateUserProfileDisplay(currentUser);
         }
         if (adminCurrentPass) adminCurrentPass.value = '';
         if (adminNewPass) adminNewPass.value = '';
@@ -1948,9 +1968,7 @@ if (guestProfileForm) {
         showToast(password ? 'Profile and password updated successfully' : 'Profile updated successfully');
         if (data.user) {
           currentUser = { ...currentUser, ...data.user };
-          if (sidebarUserDisplay) {
-            sidebarUserDisplay.textContent = currentUser.name || currentUser.username;
-          }
+          updateUserProfileDisplay(currentUser);
         }
         if (guestProfileNewPass) guestProfileNewPass.value = '';
         if (guestProfileConfirmPass) guestProfileConfirmPass.value = '';
