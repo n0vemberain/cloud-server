@@ -64,7 +64,7 @@ export function createApp() {
   app.post('/api/auth/login', handleLogin);
   app.post('/api/auth/logout', handleLogout);
   app.get('/api/auth/status', handleAuthStatus);
-  app.post('/api/auth/change-password', authMiddleware, handleChangePassword);
+  app.post('/api/auth/change-password', authMiddleware, requireAdmin, handleChangePassword);
   app.post('/api/settings/server-name', authMiddleware, requireAdmin, (req, res) => {
     try {
       const { name } = req.body;
@@ -75,16 +75,40 @@ export function createApp() {
     }
   });
 
-  // ---------------- CONNECTION & ACTIVITY TRACKING (Admin Only) ----------------
-  app.get('/api/activity/connections', authMiddleware, requireAdmin, (req, res) => {
+  // ---------------- CONNECTION & ACTIVITY TRACKING ----------------
+  app.get('/api/activity/connections', authMiddleware, (req, res) => {
     try {
       const active = getActiveSessions();
       const history = getSessionHistory();
+      const isAdmin = req.user?.role === 'admin';
+
+      const safeActive = active.map(s => ({
+        sessionId: isAdmin ? s.sessionId : null,
+        username: s.username,
+        role: s.role,
+        ip: isAdmin ? s.ip : (s.networkType.includes('Local') ? 'Local LAN' : 'External Remote'),
+        networkType: s.networkType,
+        device: s.device,
+        loginTime: s.loginTime,
+        lastActive: s.lastActive,
+        isOnline: s.isOnline
+      }));
+
+      const safeHistory = history.map(h => ({
+        id: h.id,
+        username: h.username,
+        role: h.role,
+        ip: isAdmin ? h.ip : (h.networkType.includes('Local') ? 'Local LAN' : 'External Remote'),
+        networkType: h.networkType,
+        device: h.device,
+        timestamp: h.timestamp
+      }));
+
       res.json({
         success: true,
-        activeCount: active.filter(s => s.isOnline).length,
-        active,
-        history
+        activeCount: safeActive.filter(s => s.isOnline).length,
+        active: safeActive,
+        history: safeHistory
       });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
@@ -101,8 +125,8 @@ export function createApp() {
     }
   });
 
-  // ---------------- GUEST MANAGEMENT ROUTES (Admin Only) ----------------
-  app.get('/api/guests', authMiddleware, requireAdmin, (req, res) => {
+  // ---------------- GUEST MANAGEMENT ROUTES ----------------
+  app.get('/api/guests', authMiddleware, (req, res) => {
     try {
       const guests = getGuests();
       res.json({ success: true, guests });

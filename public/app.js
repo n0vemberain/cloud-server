@@ -879,7 +879,7 @@ async function loadConnections() {
                 <span class="conn-net-badge ${netClass}">${conn.networkType}</span>
               </div>
               <div class="conn-meta">
-                <span>IP: <strong>${conn.ip}</strong></span>
+                <span>IP / Network: <strong>${conn.ip}</strong></span>
                 <span>•</span>
                 <span>${conn.device}</span>
                 <span>•</span>
@@ -887,22 +887,23 @@ async function loadConnections() {
               </div>
             </div>
           </div>
-          <div>
-            <button class="btn btn-danger btn-sm revoke-btn">Disconnect</button>
-          </div>
+          ${(currentUser?.role === 'admin' && conn.sessionId) ? '<div><button class="btn btn-danger btn-sm revoke-btn">Disconnect</button></div>' : ''}
         `;
 
-        card.querySelector('.revoke-btn').onclick = async () => {
-          if (confirm(`Disconnect session for "${conn.username}" (${conn.ip})?`)) {
-            await fetch('/api/activity/revoke', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sessionId: conn.sessionId })
-            });
-            showToast('Session disconnected');
-            loadConnections();
-          }
-        };
+        const revokeBtnEl = card.querySelector('.revoke-btn');
+        if (revokeBtnEl) {
+          revokeBtnEl.onclick = async () => {
+            if (confirm(`Disconnect session for "${conn.username}"?`)) {
+              await fetch('/api/activity/revoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: conn.sessionId })
+              });
+              showToast('Session disconnected');
+              loadConnections();
+            }
+          };
+        }
 
         activeConnectionsList.appendChild(card);
       });
@@ -983,6 +984,18 @@ async function loadGuests() {
         g.permissions.canDelete ? 'Delete' : ''
       ].filter(Boolean).join(', ') || 'Read-Only';
 
+      const isAdmin = currentUser?.role === 'admin';
+      const adminActions = isAdmin ? `
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary btn-sm change-pass-btn">Change Password</button>
+          <button class="btn btn-danger btn-sm del-guest-btn">Delete</button>
+        </div>
+      ` : `
+        <div style="font-size: 11px; color: var(--text-muted); font-style: italic;">
+          Active Guest
+        </div>
+      `;
+
       card.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 4px;">
           <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
@@ -993,44 +1006,47 @@ async function loadGuests() {
             Permissions: <strong>${permsText}</strong>
           </div>
         </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary btn-sm change-pass-btn">Change Password</button>
-          <button class="btn btn-danger btn-sm del-guest-btn">Delete</button>
-        </div>
+        ${adminActions}
       `;
 
-      card.querySelector('.change-pass-btn').onclick = () => {
-        openPrompt(`Enter new password for guest "${g.username}":`, '', async (newPass) => {
-          const ures = await fetch('/api/guests/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: g.id, password: newPass })
+      const changePassBtn = card.querySelector('.change-pass-btn');
+      if (changePassBtn) {
+        changePassBtn.onclick = () => {
+          openPrompt(`Enter new password for guest "${g.username}":`, '', async (newPass) => {
+            const ures = await fetch('/api/guests/update', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: g.id, password: newPass })
+            });
+            const udata = await ures.json();
+            if (udata.success) {
+              showToast(`Password updated for "${g.username}"`);
+            } else {
+              showToast(udata.error);
+            }
           });
-          const udata = await ures.json();
-          if (udata.success) {
-            showToast(`Password updated for "${g.username}"`);
-          } else {
-            showToast(udata.error);
-          }
-        });
-      };
+        };
+      }
 
-      card.querySelector('.del-guest-btn').onclick = async () => {
-        if (confirm(`Delete guest account "${g.username}"?`)) {
-          const dres = await fetch('/api/guests/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: g.id })
-          });
-          const ddata = await dres.json();
-          if (ddata.success) {
-            showToast(`Guest "${g.username}" deleted`);
-            loadGuests();
-          } else {
-            showToast(ddata.error);
+      const delGuestBtn = card.querySelector('.del-guest-btn');
+      if (delGuestBtn) {
+        delGuestBtn.onclick = async () => {
+          if (confirm(`Delete guest account "${g.username}"?`)) {
+            const dres = await fetch('/api/guests/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: g.id })
+            });
+            const ddata = await dres.json();
+            if (ddata.success) {
+              showToast(`Guest "${g.username}" deleted`);
+              loadGuests();
+            } else {
+              showToast(ddata.error);
+            }
           }
-        }
-      };
+        };
+      }
 
       guestsList.appendChild(card);
     });
@@ -1227,6 +1243,10 @@ if (copyRemoteUrlBtn) {
 
 // Settings Navigation Tabs
 function switchSettingsTab(tabName) {
+  if (currentUser?.role !== 'admin' && (tabName === 'general' || tabName === 'remote' || tabName === 'security')) {
+    tabName = 'connections';
+  }
+
   document.querySelectorAll('.settings-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
@@ -1238,8 +1258,8 @@ function switchSettingsTab(tabName) {
   const targetPane = document.getElementById(tabId);
   if (targetPane) targetPane.style.display = 'block';
 
-  if (tabName === 'general') updateLocalNetworkInfo();
-  if (tabName === 'remote') {
+  if (tabName === 'general' && currentUser?.role === 'admin') updateLocalNetworkInfo();
+  if (tabName === 'remote' && currentUser?.role === 'admin') {
     fetch('/api/system/tunnel')
       .then(r => r.json())
       .then(d => updateRemoteModalUI(d))
@@ -1255,16 +1275,25 @@ document.querySelectorAll('.settings-tab-btn').forEach(btn => {
 
 function openSettings(tab = 'general') {
   if (settingsModal) {
+    if (currentUser?.role !== 'admin' && (tab === 'general' || tab === 'remote' || tab === 'security')) {
+      tab = 'connections';
+    }
     settingsModal.classList.add('active');
     switchSettingsTab(tab);
   }
 }
 
-if (settingsBtn) settingsBtn.onclick = () => openSettings('general');
-if (tunnelBadge) tunnelBadge.onclick = () => openSettings('remote');
-if (settingsCloseBtn) settingsCloseBtn.onclick = () => settingsModal.classList.remove('active');
-
-settingsCancelBtn.onclick = () => settingsModal.classList.remove('active');
+if (settingsBtn) {
+  settingsBtn.onclick = () => openSettings(currentUser?.role === 'admin' ? 'general' : 'connections');
+}
+if (tunnelBadge) {
+  tunnelBadge.onclick = () => {
+    if (currentUser?.role === 'admin') openSettings('remote');
+  };
+}
+if (settingsCloseBtn) {
+  settingsCloseBtn.onclick = () => settingsModal.classList.remove('active');
+}
 
 changePasswordForm.onsubmit = async (e) => {
   e.preventDefault();
@@ -1347,12 +1376,9 @@ window.addEventListener('keydown', (e) => {
     }
   }
   if (e.key === 'Escape') {
-    editorModal.classList.remove('active');
+    if (editorModal) editorModal.classList.remove('active');
     closeMediaPreview();
-    if (remoteAccessModal) remoteAccessModal.classList.remove('active');
-    settingsModal.classList.remove('active');
-    connectionsModal.classList.remove('active');
-    guestsModal.classList.remove('active');
+    if (settingsModal) settingsModal.classList.remove('active');
     closePrompt();
     closeItemActionSheet();
     closeMobileSidebar();
@@ -1360,6 +1386,15 @@ window.addEventListener('keydown', (e) => {
 });
 
 previewCloseBtn.onclick = closeMediaPreview;
+
+// Mobile bottom bar buttons
+const mobileConnectionsBtn = document.getElementById('mobileConnectionsBtn');
+if (mobileConnectionsBtn) {
+  mobileConnectionsBtn.onclick = () => openSettings('connections');
+}
+if (mobileQrBtn) {
+  mobileQrBtn.onclick = () => openSettings(currentUser?.role === 'admin' ? 'remote' : 'connections');
+}
 
 // Mobile sidebar drawer
 menuToggleBtn.onclick = () => {

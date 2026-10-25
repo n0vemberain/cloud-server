@@ -97,12 +97,15 @@ export async function listDirectory(targetPath, showHidden = false) {
 
       if (isDir) {
         currentFolderCount++;
-        // Fast calculate folder size
-        const dirInfo = await getDirectorySize(itemPath, 2);
-        itemSize = dirInfo.totalBytes;
-        itemSizeFormatted = dirInfo.totalBytes > 0 ? dirInfo.formatted : 'Empty';
-        itemCount = dirInfo.fileCount;
-        currentTotalBytes += dirInfo.totalBytes;
+        let count = 0;
+        try {
+          const subEntries = await fs.promises.readdir(itemPath);
+          count = subEntries.length;
+          itemSizeFormatted = `${count} ${count === 1 ? 'item' : 'items'}`;
+        } catch (e) {
+          itemSizeFormatted = 'Folder';
+        }
+        itemCount = count;
       } else {
         currentFileCount++;
         itemSize = itemStat.size;
