@@ -851,25 +851,34 @@ textarea:focus {
 /* Tabs */
 .tab-header {
   display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--border-glass);
+  gap: 6px;
+  background: var(--bg-card);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-glass);
   margin-bottom: 16px;
-  padding-bottom: 8px;
 }
 .tab-btn {
+  flex: 1;
   background: transparent;
   border: none;
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 500;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
   transition: var(--transition);
+  text-align: center;
+}
+.tab-btn:hover {
+  color: var(--text-primary);
 }
 .tab-btn.active {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--accent-blue);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(10, 132, 255, 0.3);
 }
 
 /* Connection Cards & List */
@@ -1094,16 +1103,28 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
+  justify-content: center;
+  padding: 20px;
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   margin-top: 12px;
+  text-align: center;
+}
+.qr-img {
+  width: 170px;
+  height: 170px;
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 .qr-preview-hint {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 8px;
+  margin-top: 10px;
   text-align: center;
 }
 
@@ -1391,6 +1412,59 @@ textarea:focus {
   .menu-toggle-btn {
     display: inline-flex;
   }
+  .app-header {
+    height: 52px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .header-left {
+    gap: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .app-title-group {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .app-title-group h1 {
+    font-size: 14px;
+    max-width: 125px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .network-badges {
+    display: flex;
+  }
+  .network-badges .badge {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+  .header-search {
+    flex: 1;
+    margin: 0 6px;
+    min-width: 70px;
+    max-width: 170px;
+  }
+  .header-search input {
+    font-size: 12px;
+    padding: 6px 8px 6px 28px;
+    height: 32px;
+  }
+  .header-search svg {
+    left: 8px;
+    width: 13px;
+    height: 13px;
+  }
+  .header-right {
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+  .header-right .icon-btn-ghost {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 5px;
+  }
   .app-sidebar {
     position: fixed;
     top: 0;
@@ -1404,13 +1478,7 @@ textarea:focus {
   .app-sidebar.open {
     transform: translateX(280px);
   }
-  .header-search {
-    max-width: 130px;
-  }
   .btn-label-desktop {
-    display: none;
-  }
-  .network-badges {
     display: none;
   }
   .mobile-bottom-bar {
@@ -1426,22 +1494,74 @@ textarea:focus {
   .grid-item {
     padding: 10px 8px;
   }
-  .modal-window-fullscreen {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
+  .modal-overlay {
+    padding: 12px 6px;
+    align-items: flex-end;
+  }
+  .modal-window, .settings-window, .modal-window-large {
+    max-height: 92vh;
+    border-radius: 18px 18px 12px 12px;
+    width: 100%;
+  }
+  .settings-nav-tabs {
+    padding: 4px 6px;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .settings-tab-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+    gap: 6px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    border-bottom: none;
+  }
+  .settings-tab-btn.active {
+    background: rgba(10, 132, 255, 0.2);
+    border-bottom: none;
+  }
+  .settings-body {
+    max-height: calc(92vh - 125px);
+    padding: 14px 12px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .connection-card {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .connection-card .conn-left {
+    width: 100%;
+  }
+  .connection-card .revoke-btn {
+    width: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  .app-header {
-    padding: 0 10px;
+  .app-title-group h1 {
+    max-width: 95px;
   }
   .header-search {
+    max-width: 105px;
+  }
+  #tunnelStatusText {
     display: none;
+  }
+  .network-badges .badge {
+    padding: 7px;
+    border-radius: 50%;
+  }
+  .network-badges .badge .badge-dot {
+    margin: 0;
   }
   #batteryBadge {
     display: none !important;
+  }
+  .settings-tab-btn span {
+    font-size: 11px;
   }
 }
 

@@ -126,12 +126,42 @@ export function recordSession(sessionId, username, role, req) {
   return sessionObj;
 }
 
-export function updateSessionActivity(sessionId, req) {
+export function updateSessionActivity(sessionId, req, username, role) {
   if (!sessionId) return;
-  const session = activeSessions.get(sessionId);
-  if (session && !session.revoked) {
+  let session = activeSessions.get(sessionId);
+  if (!session) {
+    const ip = getClientIp(req);
+    const networkType = detectNetworkType(req);
+    const device = parseDevice(req.headers['user-agent']);
+    const now = new Date().toISOString();
+
+    session = {
+      sessionId,
+      username: username || 'admin',
+      role: role || 'admin',
+      ip,
+      networkType,
+      device,
+      loginTime: now,
+      lastActive: now,
+      revoked: false
+    };
+    activeSessions.set(sessionId, session);
+
+    if (!sessionHistory.some(h => h.id === sessionId)) {
+      sessionHistory.unshift({
+        id: sessionId,
+        username: session.username,
+        role: session.role,
+        ip,
+        networkType,
+        device,
+        timestamp: now
+      });
+      saveHistory();
+    }
+  } else if (!session.revoked) {
     session.lastActive = new Date().toISOString();
-    // Update IP or network if connection shifted
     session.ip = getClientIp(req);
     session.networkType = detectNetworkType(req);
   }

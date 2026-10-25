@@ -80,7 +80,7 @@ export function authMiddleware(req, res, next) {
   const payload = verifyToken(token, cfg);
   if (payload) {
     req.user = payload;
-    updateSessionActivity(payload.sessionId, req);
+    updateSessionActivity(payload.sessionId, req, payload.username, payload.role);
     return next();
   }
 

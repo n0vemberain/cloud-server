@@ -849,14 +849,13 @@ function uploadFiles(files) {
 
 // ---------------- CONNECTIONS & SESSIONS MODAL ----------------
 async function loadConnections() {
-  if (currentUser?.role !== 'admin') return;
   try {
     const res = await fetch('/api/activity/connections');
+    if (res.status === 401 || res.status === 403) return;
     const data = await res.json();
     if (!data.success) return;
 
-    if (activeConnectionsBadge) activeConnectionsBadge.textContent = data.activeCount || 0;
-    if (sidebarConnBadge) sidebarConnBadge.textContent = data.activeCount || 0;
+    if (settingsConnCount) settingsConnCount.textContent = data.activeCount || 0;
 
     // Render Active Sessions
     activeConnectionsList.innerHTML = '';
@@ -962,9 +961,9 @@ tabHistoryBtn.onclick = () => {
 
 // ---------------- GUESTS MANAGEMENT MODAL ----------------
 async function loadGuests() {
-  if (currentUser?.role !== 'admin') return;
   try {
     const res = await fetch('/api/guests');
+    if (res.status === 401) return;
     const data = await res.json();
     if (!data.success) return;
 

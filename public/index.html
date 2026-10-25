@@ -468,16 +468,19 @@
 
           <!-- Active Remote Details -->
           <div id="remoteActiveSection" style="margin-top: 16px; display: none;">
-            <div class="qr-section">
+            <div class="settings-card" style="margin-bottom: 12px;">
               <div style="font-size: 12px; font-weight: 600; color: var(--accent-green); margin-bottom: 6px;">
                 Encrypted Public HTTPS URL:
               </div>
-              <div class="url-display-box" style="margin-bottom: 12px;">
+              <div class="url-display-box">
                 <a id="remoteModalLink" href="#" target="_blank" class="url-text">...</a>
                 <button id="copyRemoteUrlBtn" class="btn btn-secondary btn-sm" type="button">Copy Link</button>
               </div>
+            </div>
+
+            <div class="qr-preview-box">
               <img id="remoteModalQrImg" class="qr-img" alt="Remote QR Code" src="">
-              <p class="qr-hint">Scan with mobile phone to connect across cellular 4G/5G or remote Wi-Fi.</p>
+              <div class="qr-preview-hint">Scan with mobile phone to connect across cellular 4G/5G or remote Wi-Fi.</div>
             </div>
           </div>
 
