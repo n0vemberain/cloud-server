@@ -1,4 +1,4 @@
-# Mac Cloud Server — Personal Cloud Server for macOS
+# Mac Cloud Server - Personal Cloud Server for macOS
 
 A modern, responsive personal cloud server application for your MacBook. Turn your Mac into a secure server accessible over local Wi-Fi or across the internet from any smartphone, tablet, or PC with zero router configuration.
 
