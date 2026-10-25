@@ -226,7 +226,7 @@
         <span>Folder</span>
       </button>
 
-      <button id="mobileConnectionsBtn" class="mobile-action-btn">
+      <button id="mobileConnectionsBtn" class="mobile-action-btn admin-only">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
           <circle cx="9" cy="7" r="4"></circle>
@@ -234,6 +234,13 @@
           <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
         </svg>
         <span>Users</span>
+      </button>
+
+      <button id="mobilePermsBtn" class="mobile-action-btn guest-only">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span>Access</span>
       </button>
 
       <button id="mobileQrBtn" class="mobile-action-btn">
@@ -375,7 +382,7 @@
           <span>General & LAN</span>
         </button>
 
-        <button class="settings-tab-btn admin-only" data-tab="remote">
+        <button class="settings-tab-btn" data-tab="remote">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="2" y1="12" x2="22" y2="12"></line>
@@ -384,7 +391,14 @@
           <span>Remote Access</span>
         </button>
 
-        <button class="settings-tab-btn" data-tab="connections">
+        <button class="settings-tab-btn guest-only" data-tab="permissions">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>My Permissions</span>
+        </button>
+
+        <button class="settings-tab-btn admin-only" data-tab="connections">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -395,7 +409,7 @@
           <span id="settingsConnCount" class="count-pill">1</span>
         </button>
 
-        <button class="settings-tab-btn" data-tab="guests">
+        <button class="settings-tab-btn admin-only" data-tab="guests">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -403,6 +417,7 @@
             <line x1="22" y1="11" x2="16" y2="11"></line>
           </svg>
           <span>Guest Users</span>
+          <span id="pendingRequestsCountPill" class="count-pill" style="display: none; background: var(--accent-orange); color: white;">0</span>
         </button>
 
         <button class="settings-tab-btn admin-only" data-tab="security">
@@ -448,7 +463,7 @@
         </div>
 
         <!-- Tab 2: Remote Access -->
-        <div id="paneRemote" class="settings-tab-pane admin-only" style="display: none;">
+        <div id="paneRemote" class="settings-tab-pane" style="display: none;">
           <div class="toggle-control-card">
             <div class="toggle-info">
               <div style="display: flex; align-items: center; gap: 10px;">
@@ -456,7 +471,7 @@
                 <span id="remoteStatusBadge" class="conn-net-badge local">Checking...</span>
               </div>
               <p id="remoteStatusExplanation" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                Enable or disable secure encrypted access from any cellular 4G/5G or external network in the world.
+                Secure encrypted access from any cellular 4G/5G or external network worldwide.
               </p>
             </div>
 
@@ -480,7 +495,7 @@
 
             <div class="qr-preview-box">
               <img id="remoteModalQrImg" class="qr-img" alt="Remote QR Code" src="">
-              <div class="qr-preview-hint">Scan with mobile phone to connect across cellular 4G/5G or remote Wi-Fi.</div>
+              <div class="qr-preview-hint">Scan with mobile camera to connect across cellular 4G/5G or remote Wi-Fi.</div>
             </div>
           </div>
 
@@ -491,14 +506,56 @@
                 Server is currently in Local Network Only Mode
               </div>
               <p style="font-size: 12px; color: var(--text-secondary);">
-                Remote tunnel is off. External internet traffic cannot reach your MacBook. Only devices connected to your same local Wi-Fi / LAN can access.
+                Remote tunnel is off. External internet traffic cannot reach this server. Only devices on your same local Wi-Fi can access.
               </p>
             </div>
           </div>
         </div>
 
+        <!-- Tab: Guest My Permissions -->
+        <div id="panePermissions" class="settings-tab-pane guest-only" style="display: none;">
+          <div class="settings-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <h4 class="settings-card-title">My Account Permissions</h4>
+              <span id="guestPermUsernameBadge" class="role-badge guest">Guest</span>
+            </div>
+            <p class="settings-card-desc">Review your server privileges. If you need upload, editing, or deleting access, you can request permission directly from the administrator below.</p>
+
+            <div id="guestPermissionsList" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+              <!-- Download permission card -->
+              <div class="perm-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">File Downloads</div>
+                  <div style="font-size: 12px; color: var(--text-secondary);">Download files and folders from the server</div>
+                </div>
+                <div id="permDownloadStatus">
+                  <span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">Granted</span>
+                </div>
+              </div>
+
+              <!-- Upload & Edit permission card -->
+              <div class="perm-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">File Upload & Editing</div>
+                  <div style="font-size: 12px; color: var(--text-secondary);">Upload files, create folders, and edit documents</div>
+                </div>
+                <div id="permWriteStatus"></div>
+              </div>
+
+              <!-- Delete permission card -->
+              <div class="perm-card" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">File Deleting</div>
+                  <div style="font-size: 12px; color: var(--text-secondary);">Move files to trash and delete files</div>
+                </div>
+                <div id="permDeleteStatus"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Tab 3: Connected Clients -->
-        <div id="paneConnections" class="settings-tab-pane" style="display: none;">
+        <div id="paneConnections" class="settings-tab-pane admin-only" style="display: none;">
           <div class="tab-header" style="margin-bottom: 14px;">
             <button id="tabActiveBtn" class="tab-btn active">Active Connections</button>
             <button id="tabHistoryBtn" class="tab-btn">Recent Access History</button>
@@ -514,7 +571,17 @@
         </div>
 
         <!-- Tab 4: Guest Users -->
-        <div id="paneGuests" class="settings-tab-pane" style="display: none;">
+        <div id="paneGuests" class="settings-tab-pane admin-only" style="display: none;">
+          <!-- Pending Permission Requests Section -->
+          <div id="pendingRequestsSection" class="settings-card" style="margin-bottom: 16px; border-left: 3px solid var(--accent-blue);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <h4 class="settings-card-title" style="margin: 0;">Pending Permission Requests</h4>
+              <span id="pendingRequestsCountBadge" class="role-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue);">0 Pending</span>
+            </div>
+            <p class="settings-card-desc">Review and approve requests from guest users for elevated access privileges.</p>
+            <div id="pendingRequestsList" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+
           <div class="form-card admin-only">
             <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Create Guest Account</h4>
             <form id="createGuestForm">

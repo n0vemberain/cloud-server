@@ -8,11 +8,13 @@ let tunnelStatus = 'stopped'; // 'stopped' | 'starting' | 'online' | 'error'
 let tunnelError = null;
 
 function getBinaryPath() {
-  const localBinary = path.join(process.cwd(), 'bin', 'cloudflared');
+  const isWin = process.platform === 'win32';
+  const binaryName = isWin ? 'cloudflared.exe' : 'cloudflared';
+  const localBinary = path.join(process.cwd(), 'bin', binaryName);
   if (fs.existsSync(localBinary)) {
     return localBinary;
   }
-  return 'cloudflared'; // system installed
+  return binaryName; // system installed
 }
 
 export function startTunnel(port) {

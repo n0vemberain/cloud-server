@@ -4,6 +4,7 @@ import crypto from 'crypto';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const GUESTS_FILE = path.join(DATA_DIR, 'guests.json');
+const REQUESTS_FILE = path.join(DATA_DIR, 'permission_requests.json');
 
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
@@ -28,6 +29,109 @@ export function saveGuests(guests) {
   } catch (e) {
     console.error('Error saving guests:', e);
   }
+}
+
+export function loadRequests() {
+  if (fs.existsSync(REQUESTS_FILE)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf-8'));
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.error('Error loading permission requests:', e);
+      return [];
+    }
+  }
+  return [];
+}
+
+export function saveRequests(requests) {
+  try {
+    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving permission requests:', e);
+  }
+}
+
+export function createPermissionRequest(guestId, username, permission) {
+  const allowed = ['canWrite', 'canDelete', 'canDownload'];
+  if (!allowed.includes(permission)) {
+    throw new Error('Invalid permission type requested.');
+  }
+
+  const permissionLabels = {
+    canWrite: 'File Upload & Editing',
+    canDelete: 'File Deleting',
+    canDownload: 'File Downloads'
+  };
+
+  const requests = loadRequests();
+  // Check if existing pending request already exists
+  const existing = requests.find(r => r.guestId === guestId && r.permission === permission && r.status === 'pending');
+  if (existing) {
+    return existing;
+  }
+
+  const newReq = {
+    id: 'req_' + crypto.randomBytes(6).toString('hex'),
+    guestId,
+    username,
+    permission,
+    permissionLabel: permissionLabels[permission] || permission,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    resolvedAt: null
+  };
+
+  requests.push(newReq);
+  saveRequests(requests);
+  return newReq;
+}
+
+export function getMyRequests(guestId) {
+  const requests = loadRequests();
+  return requests.filter(r => r.guestId === guestId);
+}
+
+export function getPendingRequests() {
+  const requests = loadRequests();
+  return requests.filter(r => r.status === 'pending');
+}
+
+export function approvePermissionRequest(requestId) {
+  const requests = loadRequests();
+  const req = requests.find(r => r.id === requestId);
+  if (!req) {
+    throw new Error('Request not found.');
+  }
+
+  // Update guest permissions in guests.json
+  const guests = loadGuests();
+  const guest = guests.find(g => g.id === req.guestId || g.username.toLowerCase() === req.username.toLowerCase());
+  if (guest) {
+    guest.permissions = guest.permissions || {};
+    guest.permissions[req.permission] = true;
+    saveGuests(guests);
+  }
+
+  req.status = 'approved';
+  req.resolvedAt = new Date().toISOString();
+  saveRequests(requests);
+
+  return { success: true, request: req };
+}
+
+export function declinePermissionRequest(requestId) {
+  const requests = loadRequests();
+  const req = requests.find(r => r.id === requestId);
+  if (!req) {
+    throw new Error('Request not found.');
+  }
+
+  req.status = 'declined';
+  req.resolvedAt = new Date().toISOString();
+  saveRequests(requests);
+
+  return { success: true, request: req };
 }
 
 export function getGuests() {

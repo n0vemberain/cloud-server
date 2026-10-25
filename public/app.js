@@ -208,6 +208,11 @@ function applyUserPermissions(user) {
     el.style.display = isAdmin ? '' : 'none';
   });
 
+  // Guest-only elements
+  document.querySelectorAll('.guest-only').forEach(el => {
+    el.style.display = !isAdmin ? '' : 'none';
+  });
+
   // Write permissions (upload, new folder, new file, edit save)
   const canWrite = isAdmin || perms.canWrite;
   document.querySelectorAll('.write-only').forEach(el => {
@@ -391,13 +396,19 @@ function renderGridView(items) {
     const iconSvg = getFileSvg(item);
     const iconClass = item.isDirectory ? 'item-icon-wrapper folder-icon' : 'item-icon-wrapper';
 
+    const sizeText = item.isDirectory
+      ? (item.sizeFormatted && item.sizeFormatted !== '0 B' && item.sizeFormatted !== 'Empty'
+          ? `${item.sizeFormatted} • ${item.itemCount || 0} items`
+          : (item.itemCount ? `${item.itemCount} items` : 'Empty'))
+      : item.sizeFormatted;
+
     card.innerHTML = `
       <button class="grid-item-menu-btn" title="Options" aria-label="Item options">
         ${SVG_ICONS.dots}
       </button>
       <div class="${iconClass}">${iconSvg}</div>
       <div class="item-name">${item.name}</div>
-      <div class="item-size">${item.isDirectory ? (item.sizeFormatted ? `Folder • ${item.sizeFormatted}` : 'Folder') : item.sizeFormatted}</div>
+      <div class="item-size">${sizeText}</div>
     `;
 
     card.onclick = (e) => {
@@ -424,6 +435,10 @@ function renderTableView(items) {
     const canDelete = currentUser?.role === 'admin' || currentUser?.permissions?.canDelete;
     const canDownload = currentUser?.role === 'admin' || currentUser?.permissions?.canDownload;
 
+    const tableSize = item.isDirectory
+      ? (item.sizeFormatted && item.sizeFormatted !== 'Empty' ? `${item.sizeFormatted} (${item.itemCount || 0} items)` : '0 B')
+      : item.sizeFormatted;
+
     row.innerHTML = `
       <td>
         <div class="name-col">
@@ -431,7 +446,7 @@ function renderTableView(items) {
           <span>${item.name}</span>
         </div>
       </td>
-      <td>${item.sizeFormatted}</td>
+      <td>${tableSize}</td>
       <td>${formatDate(item.mtime)}</td>
       <td class="actions-col">
         ${canDownload ? `<button class="icon-btn-ghost download-btn" title="Download">${SVG_ICONS.download}</button>` : ''}
@@ -1052,6 +1067,167 @@ async function loadGuests() {
   } catch (err) {}
 }
 
+// ---------------- PERMISSION REQUESTS & GUEST PERMISSIONS ----------------
+async function loadPendingRequests() {
+  if (currentUser?.role !== 'admin') return;
+  try {
+    const res = await fetch('/api/requests/pending');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    const pendingRequestsList = document.getElementById('pendingRequestsList');
+    const pendingRequestsCountBadge = document.getElementById('pendingRequestsCountBadge');
+    const pendingRequestsCountPill = document.getElementById('pendingRequestsCountPill');
+
+    const count = (data.pending || []).length;
+    if (pendingRequestsCountBadge) {
+      pendingRequestsCountBadge.textContent = `${count} Pending`;
+    }
+    if (pendingRequestsCountPill) {
+      if (count > 0) {
+        pendingRequestsCountPill.textContent = count;
+        pendingRequestsCountPill.style.display = 'inline-flex';
+      } else {
+        pendingRequestsCountPill.style.display = 'none';
+      }
+    }
+
+    if (!pendingRequestsList) return;
+    pendingRequestsList.innerHTML = '';
+
+    if (count === 0) {
+      pendingRequestsList.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 6px 0;">No pending requests from guests.</div>';
+      return;
+    }
+
+    data.pending.forEach(req => {
+      const card = document.createElement('div');
+      card.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); gap: 10px;';
+
+      card.innerHTML = `
+        <div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">
+            <span>@${req.username}</span> requested <span style="color: var(--accent-blue);">${req.permissionLabel}</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
+            ${formatDate(req.createdAt)}
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-shrink: 0;">
+          <button class="btn btn-primary btn-sm approve-req-btn" style="background: var(--accent-green); border-color: var(--accent-green); padding: 4px 10px; font-size: 12px;">Approve</button>
+          <button class="btn btn-secondary btn-sm decline-req-btn" style="padding: 4px 10px; font-size: 12px;">Decline</button>
+        </div>
+      `;
+
+      card.querySelector('.approve-req-btn').onclick = async () => {
+        try {
+          const ares = await fetch('/api/requests/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestId: req.id })
+          });
+          const adata = await ares.json();
+          if (adata.success) {
+            showToast(`Approved "${req.permissionLabel}" for @${req.username}`);
+            loadPendingRequests();
+            loadGuests();
+          } else {
+            showToast(adata.error || 'Failed to approve');
+          }
+        } catch (e) {
+          showToast(e.message);
+        }
+      };
+
+      card.querySelector('.decline-req-btn').onclick = async () => {
+        try {
+          const dres = await fetch('/api/requests/decline', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestId: req.id })
+          });
+          const ddata = await dres.json();
+          if (ddata.success) {
+            showToast(`Declined request from @${req.username}`);
+            loadPendingRequests();
+          } else {
+            showToast(ddata.error || 'Failed to decline');
+          }
+        } catch (e) {
+          showToast(e.message);
+        }
+      };
+
+      pendingRequestsList.appendChild(card);
+    });
+  } catch (err) {}
+}
+
+async function loadGuestPermissions() {
+  if (currentUser?.role === 'admin') return;
+
+  const guestPermUsernameBadge = document.getElementById('guestPermUsernameBadge');
+  if (guestPermUsernameBadge) {
+    guestPermUsernameBadge.textContent = `@${currentUser?.username || 'guest'}`;
+  }
+
+  let requests = [];
+  try {
+    const res = await fetch('/api/requests/my');
+    if (res.ok) {
+      const data = await res.json();
+      requests = data.requests || [];
+    }
+  } catch (err) {}
+
+  const pendingWrite = requests.find(r => r.permission === 'canWrite' && r.status === 'pending');
+  const pendingDelete = requests.find(r => r.permission === 'canDelete' && r.status === 'pending');
+
+  const permWriteStatus = document.getElementById('permWriteStatus');
+  if (permWriteStatus) {
+    if (currentUser?.permissions?.canWrite) {
+      permWriteStatus.innerHTML = '<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">Granted</span>';
+    } else if (pendingWrite) {
+      permWriteStatus.innerHTML = '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3);">Pending Approval</span>';
+    } else {
+      permWriteStatus.innerHTML = '<button class="btn btn-primary btn-sm request-btn" style="padding: 4px 10px; font-size: 12px;">Request Permission</button>';
+      permWriteStatus.querySelector('.request-btn').onclick = () => requestGuestPermission('canWrite');
+    }
+  }
+
+  const permDeleteStatus = document.getElementById('permDeleteStatus');
+  if (permDeleteStatus) {
+    if (currentUser?.permissions?.canDelete) {
+      permDeleteStatus.innerHTML = '<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">Granted</span>';
+    } else if (pendingDelete) {
+      permDeleteStatus.innerHTML = '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3);">Pending Approval</span>';
+    } else {
+      permDeleteStatus.innerHTML = '<button class="btn btn-primary btn-sm request-btn" style="padding: 4px 10px; font-size: 12px;">Request Permission</button>';
+      permDeleteStatus.querySelector('.request-btn').onclick = () => requestGuestPermission('canDelete');
+    }
+  }
+}
+
+async function requestGuestPermission(permission) {
+  try {
+    const res = await fetch('/api/requests/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permission })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast('Permission request submitted to administrator');
+      loadGuestPermissions();
+    } else {
+      showToast(data.error || 'Failed to submit request');
+    }
+  } catch (err) {
+    showToast(err.message);
+  }
+}
+
 
 
 createGuestForm.onsubmit = async (e) => {
@@ -1242,8 +1418,11 @@ if (copyRemoteUrlBtn) {
 
 // Settings Navigation Tabs
 function switchSettingsTab(tabName) {
-  if (currentUser?.role !== 'admin' && (tabName === 'general' || tabName === 'remote' || tabName === 'security')) {
-    tabName = 'connections';
+  const isAdmin = currentUser?.role === 'admin';
+  if (!isAdmin) {
+    if (tabName !== 'remote' && tabName !== 'permissions') {
+      tabName = 'remote';
+    }
   }
 
   document.querySelectorAll('.settings-tab-btn').forEach(btn => {
@@ -1257,25 +1436,33 @@ function switchSettingsTab(tabName) {
   const targetPane = document.getElementById(tabId);
   if (targetPane) targetPane.style.display = 'block';
 
-  if (tabName === 'general' && currentUser?.role === 'admin') updateLocalNetworkInfo();
-  if (tabName === 'remote' && currentUser?.role === 'admin') {
+  if (tabName === 'general' && isAdmin) updateLocalNetworkInfo();
+  if (tabName === 'remote') {
     fetch('/api/system/tunnel')
       .then(r => r.json())
       .then(d => updateRemoteModalUI(d))
       .catch(() => {});
   }
-  if (tabName === 'connections') loadConnections();
-  if (tabName === 'guests') loadGuests();
+  if (tabName === 'permissions' && !isAdmin) loadGuestPermissions();
+  if (tabName === 'connections' && isAdmin) loadConnections();
+  if (tabName === 'guests' && isAdmin) {
+    loadGuests();
+    loadPendingRequests();
+  }
 }
 
 document.querySelectorAll('.settings-tab-btn').forEach(btn => {
   btn.onclick = () => switchSettingsTab(btn.dataset.tab);
 });
 
-function openSettings(tab = 'general') {
+function openSettings(tab) {
   if (settingsModal) {
-    if (currentUser?.role !== 'admin' && (tab === 'general' || tab === 'remote' || tab === 'security')) {
-      tab = 'connections';
+    const isAdmin = currentUser?.role === 'admin';
+    if (!tab) {
+      tab = isAdmin ? 'general' : 'remote';
+    }
+    if (!isAdmin && tab !== 'remote' && tab !== 'permissions') {
+      tab = 'remote';
     }
     settingsModal.classList.add('active');
     switchSettingsTab(tab);
@@ -1283,12 +1470,10 @@ function openSettings(tab = 'general') {
 }
 
 if (settingsBtn) {
-  settingsBtn.onclick = () => openSettings(currentUser?.role === 'admin' ? 'general' : 'connections');
+  settingsBtn.onclick = () => openSettings();
 }
 if (tunnelBadge) {
-  tunnelBadge.onclick = () => {
-    if (currentUser?.role === 'admin') openSettings('remote');
-  };
+  tunnelBadge.onclick = () => openSettings('remote');
 }
 if (settingsCloseBtn) {
   settingsCloseBtn.onclick = () => settingsModal.classList.remove('active');
@@ -1391,8 +1576,12 @@ const mobileConnectionsBtn = document.getElementById('mobileConnectionsBtn');
 if (mobileConnectionsBtn) {
   mobileConnectionsBtn.onclick = () => openSettings('connections');
 }
+const mobilePermsBtn = document.getElementById('mobilePermsBtn');
+if (mobilePermsBtn) {
+  mobilePermsBtn.onclick = () => openSettings('permissions');
+}
 if (mobileQrBtn) {
-  mobileQrBtn.onclick = () => openSettings(currentUser?.role === 'admin' ? 'remote' : 'connections');
+  mobileQrBtn.onclick = () => openSettings('remote');
 }
 
 // Mobile sidebar drawer
@@ -1408,11 +1597,21 @@ async function init() {
   await updateMetrics();
   await updateTunnelStatus();
   await loadDirectory();
-  loadConnections();
+  if (currentUser?.role === 'admin') {
+    loadConnections();
+    loadPendingRequests();
+  } else {
+    loadGuestPermissions();
+  }
 
   setInterval(updateMetrics, 10000);
   setInterval(updateTunnelStatus, 8000);
-  setInterval(loadConnections, 6000);
+  setInterval(() => {
+    if (currentUser?.role === 'admin') {
+      loadConnections();
+      loadPendingRequests();
+    }
+  }, 6000);
 }
 
 init();

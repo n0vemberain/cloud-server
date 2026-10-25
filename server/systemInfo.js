@@ -1,4 +1,5 @@
 import os from 'os';
+import fs from 'fs';
 import { exec } from 'child_process';
 import util from 'util';
 
@@ -20,10 +21,12 @@ export function getLocalIpAddresses() {
     }
   }
 
-  // Prioritize en0 (standard Wi-Fi on Mac)
+  // Prioritize Wi-Fi and primary LAN adapters across macOS, Windows, Linux
   addresses.sort((a, b) => {
-    if (a.interface === 'en0') return -1;
-    if (b.interface === 'en0') return 1;
+    const isPrimaryA = a.interface === 'en0' || /wi-fi|wlan|wireless/i.test(a.interface);
+    const isPrimaryB = b.interface === 'en0' || /wi-fi|wlan|wireless/i.test(b.interface);
+    if (isPrimaryA && !isPrimaryB) return -1;
+    if (!isPrimaryA && isPrimaryB) return 1;
     return a.interface.localeCompare(b.interface);
   });
 
@@ -39,46 +42,55 @@ export async function getMacMetrics() {
   let battery = { percent: null, status: 'Unknown', isCharging: false };
   let disk = { total: '0 GB', used: '0 GB', free: '0 GB', percentUsed: 0 };
 
-  // Fetch battery details on macOS
-  try {
-    const { stdout } = await execPromise('pmset -g batt');
-    const percentMatch = stdout.match(/(\d+)%/);
-    if (percentMatch) {
-      battery.percent = parseInt(percentMatch[1], 10);
-      const isCharging = stdout.includes('charging') && !stdout.includes('discharging');
-      const isAc = stdout.includes('AC Power') || stdout.includes('AC attached');
-      battery.isCharging = isCharging || isAc;
-      battery.status = stdout.includes('discharging') ? 'Discharging' : (isCharging ? 'Charging' : 'Full / AC');
-    }
-  } catch (err) {
-    // pmset might not be available or fail (e.g. desktop Mac without battery)
+  const isWin = process.platform === 'win32';
+
+  // Fetch battery details
+  if (isWin) {
+    try {
+      const { stdout } = await execPromise('powershell -NoProfile -Command "(Get-CimInstance -ClassName Win32_Battery).EstimatedChargeRemaining"');
+      const val = parseInt(stdout.trim(), 10);
+      if (!isNaN(val)) {
+        battery.percent = val;
+        battery.status = 'Battery / AC';
+        battery.isCharging = true;
+      }
+    } catch (e) {}
+  } else {
+    // macOS / Linux
+    try {
+      const { stdout } = await execPromise('pmset -g batt');
+      const percentMatch = stdout.match(/(\d+)%/);
+      if (percentMatch) {
+        battery.percent = parseInt(percentMatch[1], 10);
+        const isCharging = stdout.includes('charging') && !stdout.includes('discharging');
+        const isAc = stdout.includes('AC Power') || stdout.includes('AC attached');
+        battery.isCharging = isCharging || isAc;
+        battery.status = stdout.includes('discharging') ? 'Discharging' : (isCharging ? 'Charging' : 'Full / AC');
+      }
+    } catch (err) {}
   }
 
-  // Fetch disk usage on root macOS filesystem
+  // Fetch disk usage using cross-platform statfs
   try {
-    const { stdout } = await execPromise('df -k /');
-    const lines = stdout.trim().split('\n');
-    if (lines.length > 1) {
-      const parts = lines[1].trim().split(/\s+/);
-      // Filesystem, 1024-blocks, Used, Available, Capacity, ...
-      const totalBlocks = parseInt(parts[1], 10);
-      const usedBlocks = parseInt(parts[2], 10);
-      const availBlocks = parseInt(parts[3], 10);
+    const rootPath = isWin ? (process.env.SystemDrive || 'C:') + '\\' : '/';
+    const stat = await fs.promises.statfs(rootPath);
+    const totalBytes = Number(stat.bsize) * Number(stat.blocks);
+    const freeBytes = Number(stat.bsize) * Number(stat.bfree);
+    const usedBytes = totalBytes - freeBytes;
 
-      const totalGb = (totalBlocks / 1024 / 1024).toFixed(1);
-      const usedGb = (usedBlocks / 1024 / 1024).toFixed(1);
-      const freeGb = (availBlocks / 1024 / 1024).toFixed(1);
-      const pct = Math.round((usedBlocks / totalBlocks) * 100);
+    const totalGb = (totalBytes / (1024 * 1024 * 1024)).toFixed(1);
+    const usedGb = (usedBytes / (1024 * 1024 * 1024)).toFixed(1);
+    const freeGb = (freeBytes / (1024 * 1024 * 1024)).toFixed(1);
+    const pct = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0;
 
-      disk = {
-        total: `${totalGb} GB`,
-        used: `${usedGb} GB`,
-        free: `${freeGb} GB`,
-        percentUsed: pct
-      };
-    }
+    disk = {
+      total: `${totalGb} GB`,
+      used: `${usedGb} GB`,
+      free: `${freeGb} GB`,
+      percentUsed: pct
+    };
   } catch (err) {
-    // ignore
+    // Fallback if statfs fails
   }
 
   return {

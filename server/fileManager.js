@@ -5,16 +5,21 @@ import mime from 'mime-types';
 
 export function getBookmarks() {
   const home = os.homedir();
-  return [
+  const isWin = process.platform === 'win32';
+  const rootDrive = isWin ? (process.env.SystemDrive || 'C:') + '\\' : '/';
+  const rootLabel = isWin ? `Local Disk (${rootDrive})` : 'Root (Macintosh HD)';
+
+  const bookmarks = [
     { name: 'Home', path: home, icon: 'home' },
     { name: 'Desktop', path: path.join(home, 'Desktop'), icon: 'desktop' },
     { name: 'Documents', path: path.join(home, 'Documents'), icon: 'document' },
     { name: 'Downloads', path: path.join(home, 'Downloads'), icon: 'download' },
     { name: 'Pictures', path: path.join(home, 'Pictures'), icon: 'image' },
     { name: 'Music', path: path.join(home, 'Music'), icon: 'music' },
-    { name: 'Movies', path: path.join(home, 'Movies'), icon: 'video' },
-    { name: 'Root (Macintosh HD)', path: '/', icon: 'server' }
-  ].filter(b => fs.existsSync(b.path));
+    { name: isWin ? 'Videos' : 'Movies', path: path.join(home, isWin ? 'Videos' : 'Movies'), icon: 'video' },
+    { name: rootLabel, path: rootDrive, icon: 'server' }
+  ];
+  return bookmarks.filter(b => fs.existsSync(b.path));
 }
 
 export function formatBytes(bytes) {
@@ -24,6 +29,8 @@ export function formatBytes(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+const folderSizeCache = new Map();
 
 // Calculate directory size and file count
 export async function getDirectorySize(dirPath, maxDepth = 2) {
@@ -37,6 +44,7 @@ export async function getDirectorySize(dirPath, maxDepth = 2) {
       const entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
+        if (entry.name === 'node_modules' || entry.name === 'Library' || entry.name === '.git') continue;
         const full = path.join(currentPath, entry.name);
         try {
           if (entry.isDirectory()) {
@@ -74,61 +82,74 @@ export async function listDirectory(targetPath, showHidden = false) {
   }
 
   const entries = await fs.promises.readdir(safePath, { withFileTypes: true });
-  const items = [];
   let currentTotalBytes = 0;
-  let currentFileCount = 0;
-  let currentFolderCount = 0;
+
+  const dirEntries = [];
+  const fileEntries = [];
 
   for (const entry of entries) {
     if (!showHidden && entry.name.startsWith('.')) {
       continue;
     }
-
     const itemPath = path.join(safePath, entry.name);
     try {
       const itemStat = await fs.promises.stat(itemPath);
-      const isDir = entry.isDirectory();
-      const mimeType = isDir ? 'folder' : (mime.lookup(itemPath) || 'application/octet-stream');
-      const ext = path.extname(entry.name).toLowerCase();
-
-      let itemSize = 0;
-      let itemSizeFormatted = '--';
-      let itemCount = 0;
-
-      if (isDir) {
-        currentFolderCount++;
-        let count = 0;
-        try {
-          const subEntries = await fs.promises.readdir(itemPath);
-          count = subEntries.length;
-          itemSizeFormatted = `${count} ${count === 1 ? 'item' : 'items'}`;
-        } catch (e) {
-          itemSizeFormatted = 'Folder';
-        }
-        itemCount = count;
+      if (entry.isDirectory()) {
+        dirEntries.push({ entry, itemPath, itemStat });
       } else {
-        currentFileCount++;
-        itemSize = itemStat.size;
-        itemSizeFormatted = formatBytes(itemStat.size);
-        currentTotalBytes += itemStat.size;
+        fileEntries.push({ entry, itemPath, itemStat });
       }
-
-      items.push({
-        name: entry.name,
-        path: itemPath,
-        isDirectory: isDir,
-        size: itemSize,
-        sizeFormatted: itemSizeFormatted,
-        itemCount,
-        mtime: itemStat.mtime.toISOString(),
-        mime: mimeType,
-        extension: ext,
-        isHidden: entry.name.startsWith('.')
-      });
-    } catch (err) {
-      continue;
-    }
+    } catch (err) {}
   }
+
+  // Calculate folder sizes in parallel with in-memory caching
+  const dirItems = await Promise.all(dirEntries.map(async ({ entry, itemPath, itemStat }) => {
+    let dirInfo = folderSizeCache.get(itemPath);
+    if (!dirInfo || dirInfo.mtimeMs !== itemStat.mtimeMs) {
+      try {
+        dirInfo = await getDirectorySize(itemPath, 2);
+        dirInfo.mtimeMs = itemStat.mtimeMs;
+        folderSizeCache.set(itemPath, dirInfo);
+      } catch (e) {
+        dirInfo = { totalBytes: 0, fileCount: 0, formatted: '0 B' };
+      }
+    }
+    currentTotalBytes += dirInfo.totalBytes;
+
+    return {
+      name: entry.name,
+      path: itemPath,
+      isDirectory: true,
+      size: dirInfo.totalBytes,
+      sizeFormatted: dirInfo.totalBytes > 0 ? dirInfo.formatted : (dirInfo.fileCount === 0 ? 'Empty' : '0 B'),
+      itemCount: dirInfo.fileCount,
+      mtime: itemStat.mtime.toISOString(),
+      mime: 'folder',
+      extension: '',
+      isHidden: entry.name.startsWith('.')
+    };
+  }));
+
+  // Process files
+  const fileItems = fileEntries.map(({ entry, itemPath, itemStat }) => {
+    currentTotalBytes += itemStat.size;
+    return {
+      name: entry.name,
+      path: itemPath,
+      isDirectory: false,
+      size: itemStat.size,
+      sizeFormatted: formatBytes(itemStat.size),
+      itemCount: 0,
+      mtime: itemStat.mtime.toISOString(),
+      mime: mime.lookup(itemPath) || 'application/octet-stream',
+      extension: path.extname(entry.name).toLowerCase(),
+      isHidden: entry.name.startsWith('.')
+    };
+  });
+
+  const items = [...dirItems, ...fileItems];
+  const currentFolderCount = dirEntries.length;
+  const currentFileCount = fileEntries.length;
 
   // Sort: directories first, then alphabetically
   items.sort((a, b) => {
@@ -147,8 +168,11 @@ export async function listDirectory(targetPath, showHidden = false) {
     if (i === 0 && part === '') {
       currentAcc = '/';
       breadcrumbs.push({ name: 'Root', path: '/' });
+    } else if (i === 0 && /^[a-zA-Z]:$/.test(part)) {
+      currentAcc = part + path.sep;
+      breadcrumbs.push({ name: part, path: currentAcc });
     } else if (part) {
-      currentAcc = path.join(currentAcc, part);
+      currentAcc = currentAcc ? path.join(currentAcc, part) : part;
       breadcrumbs.push({ name: part, path: currentAcc });
     }
   }
@@ -228,8 +252,19 @@ export async function deleteItem(targetPath, permanent = false) {
     throw new Error('Item does not exist');
   }
 
-  const protectedPaths = ['/', '/System', '/Library', '/bin', '/sbin', '/usr', os.homedir()];
-  if (protectedPaths.includes(safePath)) {
+  const isWin = process.platform === 'win32';
+  const protectedPaths = isWin
+    ? [
+        (process.env.SystemDrive || 'C:') + '\\',
+        path.join(process.env.SystemDrive || 'C:\\', 'Windows'),
+        path.join(process.env.SystemDrive || 'C:\\', 'Program Files'),
+        path.join(process.env.SystemDrive || 'C:\\', 'Program Files (x86)'),
+        os.homedir()
+      ].map(p => path.resolve(p).toLowerCase())
+    : ['/', '/System', '/Library', '/bin', '/sbin', '/usr', os.homedir()].map(p => path.resolve(p));
+
+  const checkPath = isWin ? safePath.toLowerCase() : safePath;
+  if (protectedPaths.includes(checkPath)) {
     throw new Error('Cannot delete protected system or home directory');
   }
 

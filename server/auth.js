@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { loadConfig, updatePassword } from './config.js';
-import { authenticateUser } from './userManager.js';
+import { authenticateUser, loadGuests } from './userManager.js';
 import { recordSession, updateSessionActivity, revokeSession } from './sessionTracker.js';
 
 const failedAttempts = new Map();
@@ -79,6 +79,14 @@ export function authMiddleware(req, res, next) {
 
   const payload = verifyToken(token, cfg);
   if (payload) {
+    if (payload.role === 'guest') {
+      const guests = loadGuests();
+      const currentGuest = guests.find(g => g.username.toLowerCase() === payload.username.toLowerCase());
+      if (currentGuest && currentGuest.permissions) {
+        payload.permissions = currentGuest.permissions;
+        payload.id = currentGuest.id;
+      }
+    }
     req.user = payload;
     updateSessionActivity(payload.sessionId, req, payload.username, payload.role);
     return next();
@@ -181,9 +189,17 @@ export function handleAuthStatus(req, res) {
   const cfg = loadConfig();
   const token = req.cookies?.mac_token || req.headers.authorization?.replace('Bearer ', '');
   const payload = verifyToken(token, cfg);
+  if (payload && payload.role === 'guest') {
+    const guests = loadGuests();
+    const currentGuest = guests.find(g => g.username.toLowerCase() === payload.username.toLowerCase());
+    if (currentGuest && currentGuest.permissions) {
+      payload.permissions = currentGuest.permissions;
+      payload.id = currentGuest.id;
+    }
+  }
   return res.json({
     authenticated: !!payload,
-    user: payload ? { username: payload.username, role: payload.role, permissions: payload.permissions } : null,
+    user: payload ? { id: payload.id, username: payload.username, role: payload.role, permissions: payload.permissions } : null,
     isConfigured: cfg.isConfigured,
     serverName: cfg.serverName
   });

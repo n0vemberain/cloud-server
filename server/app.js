@@ -28,8 +28,18 @@ import {
 import { handleFileDownload, handleFileStream } from './streamHandler.js';
 import { getMacMetrics } from './systemInfo.js';
 import { startTunnel, stopTunnel, getTunnelStatus } from './tunnelManager.js';
-import { getActiveSessions, getSessionHistory, revokeSession } from './sessionTracker.js';
-import { getGuests, createGuest, deleteGuest, updateGuestPassword, updateGuestPermissions } from './userManager.js';
+import {
+  getGuests,
+  createGuest,
+  deleteGuest,
+  updateGuestPassword,
+  updateGuestPermissions,
+  getMyRequests,
+  getPendingRequests,
+  createPermissionRequest,
+  approvePermissionRequest,
+  declinePermissionRequest
+} from './userManager.js';
 
 export function createApp() {
   const app = express();
@@ -76,17 +86,16 @@ export function createApp() {
   });
 
   // ---------------- CONNECTION & ACTIVITY TRACKING ----------------
-  app.get('/api/activity/connections', authMiddleware, (req, res) => {
+  app.get('/api/activity/connections', authMiddleware, requireAdmin, (req, res) => {
     try {
       const active = getActiveSessions();
       const history = getSessionHistory();
-      const isAdmin = req.user?.role === 'admin';
 
       const safeActive = active.map(s => ({
-        sessionId: isAdmin ? s.sessionId : null,
+        sessionId: s.sessionId,
         username: s.username,
         role: s.role,
-        ip: isAdmin ? s.ip : (s.networkType.includes('Local') ? 'Local LAN' : 'External Remote'),
+        ip: s.ip,
         networkType: s.networkType,
         device: s.device,
         loginTime: s.loginTime,
@@ -98,7 +107,7 @@ export function createApp() {
         id: h.id,
         username: h.username,
         role: h.role,
-        ip: isAdmin ? h.ip : (h.networkType.includes('Local') ? 'Local LAN' : 'External Remote'),
+        ip: h.ip,
         networkType: h.networkType,
         device: h.device,
         timestamp: h.timestamp
@@ -126,7 +135,7 @@ export function createApp() {
   });
 
   // ---------------- GUEST MANAGEMENT ROUTES ----------------
-  app.get('/api/guests', authMiddleware, (req, res) => {
+  app.get('/api/guests', authMiddleware, requireAdmin, (req, res) => {
     try {
       const guests = getGuests();
       res.json({ success: true, guests });
@@ -161,6 +170,61 @@ export function createApp() {
       if (password) updateGuestPassword(id, password);
       if (permissions) updateGuestPermissions(id, permissions);
       res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  // ---------------- PERMISSION REQUEST ROUTES ----------------
+  app.get('/api/requests/my', authMiddleware, (req, res) => {
+    try {
+      const guestId = req.user?.id || req.user?.username;
+      const requests = getMyRequests(guestId);
+      res.json({ success: true, requests });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/requests/create', authMiddleware, (req, res) => {
+    try {
+      if (req.user?.role === 'admin') {
+        return res.status(400).json({ success: false, error: 'Admin already has full access.' });
+      }
+      const { permission } = req.body;
+      const guestId = req.user?.id || req.user?.username;
+      const username = req.user?.username;
+      const request = createPermissionRequest(guestId, username, permission);
+      res.json({ success: true, request });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.get('/api/requests/pending', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const pending = getPendingRequests();
+      res.json({ success: true, pending });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/requests/approve', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const { requestId } = req.body;
+      const result = approvePermissionRequest(requestId);
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/requests/decline', authMiddleware, requireAdmin, (req, res) => {
+    try {
+      const { requestId } = req.body;
+      const result = declinePermissionRequest(requestId);
+      res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
     }
