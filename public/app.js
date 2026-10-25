@@ -71,15 +71,27 @@ const previewContent = document.getElementById('previewContent');
 const previewDownloadBtn = document.getElementById('previewDownloadBtn');
 const previewCloseBtn = document.getElementById('previewCloseBtn');
 
-const qrModal = document.getElementById('qrModal');
-const qrModalBtn = document.getElementById('qrModalBtn');
-const qrCloseBtn = document.getElementById('qrCloseBtn');
-const qrLocalLink = document.getElementById('qrLocalLink');
-const qrLocalImg = document.getElementById('qrLocalImg');
-const qrRemoteLink = document.getElementById('qrRemoteLink');
-const qrRemoteImg = document.getElementById('qrRemoteImg');
-const qrRemoteStatus = document.getElementById('qrRemoteStatus');
-const qrToggleTunnelBtn = document.getElementById('qrToggleTunnelBtn');
+const remoteAccessModal = document.getElementById('remoteAccessModal');
+const remoteModalBtn = document.getElementById('remoteModalBtn');
+const remoteCloseBtn = document.getElementById('remoteCloseBtn');
+const remoteStatusBadge = document.getElementById('remoteStatusBadge');
+const remoteStatusExplanation = document.getElementById('remoteStatusExplanation');
+const remoteSwitchCheckbox = document.getElementById('remoteSwitchCheckbox');
+const remoteActiveSection = document.getElementById('remoteActiveSection');
+const remoteInactiveSection = document.getElementById('remoteInactiveSection');
+const remoteModalLink = document.getElementById('remoteModalLink');
+const copyRemoteUrlBtn = document.getElementById('copyRemoteUrlBtn');
+const remoteModalQrImg = document.getElementById('remoteModalQrImg');
+const localModalLink = document.getElementById('localModalLink');
+const localModalQrImg = document.getElementById('localModalQrImg');
+const folderStatsPill = document.getElementById('folderStatsPill');
+
+const sidebarConnectionsItem = document.getElementById('sidebarConnectionsItem');
+const sidebarGuestsItem = document.getElementById('sidebarGuestsItem');
+const sidebarRemoteItem = document.getElementById('sidebarRemoteItem');
+const sidebarSettingsItem = document.getElementById('sidebarSettingsItem');
+const sidebarConnBadge = document.getElementById('sidebarConnBadge');
+
 
 const promptModal = document.getElementById('promptModal');
 const promptTitle = document.getElementById('promptTitle');
@@ -223,6 +235,25 @@ function applyUserPermissions(user) {
   });
 }
 
+// Check Auth Status on Page Load
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth/status');
+    if (res.status === 401) {
+      window.location.href = '/login.html';
+      return false;
+    }
+    const data = await res.json();
+    if (data.authenticated && data.user) {
+      applyUserPermissions(data.user);
+      return true;
+    }
+  } catch (err) {
+    console.error('Check auth error:', err);
+  }
+  return false;
+}
+
 // Load Directory
 async function loadDirectory(path = '') {
   try {
@@ -244,6 +275,15 @@ async function loadDirectory(path = '') {
       applyUserPermissions(data.user);
     }
 
+    if (folderStatsPill) {
+      if (data.folderStats && data.folderStats.summary) {
+        folderStatsPill.textContent = data.folderStats.summary;
+        folderStatsPill.style.display = 'inline-flex';
+      } else {
+        folderStatsPill.style.display = 'none';
+      }
+    }
+
     currentPath = data.currentPath;
     currentItems = data.items;
 
@@ -254,6 +294,7 @@ async function loadDirectory(path = '') {
     showToast('Server connection error: ' + err.message);
   }
 }
+
 
 // Render Breadcrumbs
 function renderBreadcrumbs(crumbs) {
@@ -348,7 +389,7 @@ function renderGridView(items) {
   items.forEach(item => {
     const card = document.createElement('div');
     card.className = 'grid-item';
-    card.title = `${item.name} (${item.sizeFormatted})`;
+    card.title = item.isDirectory ? `${item.name} (Folder, ${item.sizeFormatted || 'Empty'})` : `${item.name} (${item.sizeFormatted})`;
 
     const iconSvg = getFileSvg(item);
     const iconClass = item.isDirectory ? 'item-icon-wrapper folder-icon' : 'item-icon-wrapper';
@@ -359,7 +400,7 @@ function renderGridView(items) {
       </button>
       <div class="${iconClass}">${iconSvg}</div>
       <div class="item-name">${item.name}</div>
-      <div class="item-size">${item.isDirectory ? 'Folder' : item.sizeFormatted}</div>
+      <div class="item-size">${item.isDirectory ? (item.sizeFormatted ? `Folder • ${item.sizeFormatted}` : 'Folder') : item.sizeFormatted}</div>
     `;
 
     card.onclick = (e) => {
@@ -817,7 +858,8 @@ async function loadConnections() {
     const data = await res.json();
     if (!data.success) return;
 
-    activeConnectionsBadge.textContent = data.activeCount || 0;
+    if (activeConnectionsBadge) activeConnectionsBadge.textContent = data.activeCount || 0;
+    if (sidebarConnBadge) sidebarConnBadge.textContent = data.activeCount || 0;
 
     // Render Active Sessions
     activeConnectionsList.innerHTML = '';
@@ -1055,7 +1097,7 @@ async function updateMetrics() {
       if (primaryNet) {
         currentLocalUrl = `http://${primaryNet.address}:${window.location.port || '7890'}`;
         localIpText.textContent = `LAN: ${primaryNet.address}`;
-        localIpBadge.onclick = () => openQrModal();
+        localIpBadge.onclick = () => openRemoteModal();
       }
 
       if (data.battery && data.battery.percent !== null) {
@@ -1087,62 +1129,130 @@ async function updateTunnelStatus() {
   } catch (err) {}
 }
 
-async function toggleTunnel() {
-  try {
-    showToast('Toggling remote tunnel connection...');
-    const action = currentTunnelUrl ? 'stop' : 'start';
-    const res = await fetch('/api/system/tunnel/toggle', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action })
-    });
-    const data = await res.json();
-    await updateTunnelStatus();
-    showToast(data.running ? 'Remote Internet Tunnel Online' : 'Remote Tunnel Stopped');
-  } catch (err) {
-    showToast('Tunnel error: ' + err.message);
+function updateRemoteModalUI(data) {
+  const isOnline = Boolean(data && data.running && data.url);
+  if (remoteSwitchCheckbox) {
+    remoteSwitchCheckbox.checked = isOnline;
   }
-}
-
-// QR Code Modal
-async function openQrModal() {
-  qrModal.classList.add('active');
+  if (remoteStatusBadge) {
+    remoteStatusBadge.textContent = isOnline ? 'Online (Public HTTPS)' : 'Disabled (Local Only)';
+    remoteStatusBadge.className = isOnline ? 'conn-net-badge remote' : 'conn-net-badge local';
+  }
+  if (remoteStatusExplanation) {
+    remoteStatusExplanation.textContent = isOnline
+      ? 'Your MacBook is securely reachable over the global internet via encrypted Cloudflare Tunnel.'
+      : 'Remote tunnel is off. External internet traffic cannot reach your Mac. Only devices on your Wi-Fi / LAN can access.';
+  }
 
   const localUrl = currentLocalUrl || window.location.origin;
-  qrLocalLink.href = localUrl;
-  qrLocalLink.textContent = localUrl;
-  fetch(`/api/system/qr?url=${encodeURIComponent(localUrl)}`)
-    .then(r => r.json())
-    .then(d => { if (d.success) qrLocalImg.src = d.qr; });
+  if (localModalLink) {
+    localModalLink.href = localUrl;
+    localModalLink.textContent = localUrl;
+  }
 
-  if (currentTunnelUrl) {
-    qrRemoteStatus.textContent = 'Remote HTTPS tunnel online:';
-    qrRemoteLink.style.display = 'inline-block';
-    qrRemoteLink.href = currentTunnelUrl;
-    qrRemoteLink.textContent = currentTunnelUrl;
-    qrRemoteImg.style.display = 'block';
-    fetch(`/api/system/qr?url=${encodeURIComponent(currentTunnelUrl)}`)
+  if (isOnline) {
+    if (remoteActiveSection) remoteActiveSection.style.display = 'block';
+    if (remoteInactiveSection) remoteInactiveSection.style.display = 'none';
+    if (remoteModalLink) {
+      remoteModalLink.href = data.url;
+      remoteModalLink.textContent = data.url;
+    }
+    fetch(`/api/system/qr?url=${encodeURIComponent(data.url)}`)
       .then(r => r.json())
-      .then(d => { if (d.success) qrRemoteImg.src = d.qr; });
-    qrToggleTunnelBtn.textContent = 'Stop Remote Tunnel';
+      .then(d => {
+        if (d.success && remoteModalQrImg) remoteModalQrImg.src = d.qr;
+      }).catch(() => {});
   } else {
-    qrRemoteStatus.textContent = 'Remote Internet Tunnel is currently offline';
-    qrRemoteLink.style.display = 'none';
-    qrRemoteImg.style.display = 'none';
-    qrToggleTunnelBtn.textContent = 'Start Remote Tunnel';
+    if (remoteActiveSection) remoteActiveSection.style.display = 'none';
+    if (remoteInactiveSection) remoteInactiveSection.style.display = 'block';
+    fetch(`/api/system/qr?url=${encodeURIComponent(localUrl)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && localModalQrImg) localModalQrImg.src = d.qr;
+      }).catch(() => {});
   }
 }
 
-qrModalBtn.onclick = openQrModal;
-if (mobileQrBtn) mobileQrBtn.onclick = openQrModal;
-localIpBadge.onclick = openQrModal;
-tunnelBadge.onclick = openQrModal;
-qrCloseBtn.onclick = () => qrModal.classList.remove('active');
-tunnelToggleBtn.onclick = toggleTunnel;
-qrToggleTunnelBtn.onclick = async () => {
-  await toggleTunnel();
-  openQrModal();
-};
+async function openRemoteModal() {
+  if (remoteAccessModal) {
+    remoteAccessModal.classList.add('active');
+  }
+  try {
+    const res = await fetch('/api/system/tunnel');
+    const data = await res.json();
+    updateRemoteModalUI(data);
+  } catch (err) {
+    console.error('Error fetching tunnel status for modal:', err);
+  }
+}
+
+if (remoteModalBtn) remoteModalBtn.onclick = openRemoteModal;
+if (localIpBadge) localIpBadge.onclick = openRemoteModal;
+if (tunnelBadge) tunnelBadge.onclick = openRemoteModal;
+if (tunnelToggleBtn) tunnelToggleBtn.onclick = openRemoteModal;
+if (remoteCloseBtn) remoteCloseBtn.onclick = () => remoteAccessModal?.classList.remove('active');
+
+if (remoteSwitchCheckbox) {
+  remoteSwitchCheckbox.onchange = async () => {
+    const shouldStart = remoteSwitchCheckbox.checked;
+    showToast(shouldStart ? 'Starting Remote Internet Tunnel...' : 'Stopping Remote Internet Access...');
+    try {
+      const res = await fetch('/api/system/tunnel/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: shouldStart ? 'start' : 'stop' })
+      });
+      const data = await res.json();
+      await updateTunnelStatus();
+      updateRemoteModalUI(data);
+      showToast(data.running ? 'Remote Access is now ONLINE' : 'Remote Access is now OFF (Local Only)');
+    } catch (err) {
+      showToast('Toggle error: ' + err.message);
+      remoteSwitchCheckbox.checked = !shouldStart;
+    }
+  };
+}
+
+if (copyRemoteUrlBtn) {
+  copyRemoteUrlBtn.onclick = () => {
+    if (currentTunnelUrl) {
+      navigator.clipboard.writeText(currentTunnelUrl)
+        .then(() => showToast('Remote link copied to clipboard!'))
+        .catch(() => showToast('Failed to copy link'));
+    }
+  };
+}
+
+// Sidebar Admin Navigation Item Listeners
+if (sidebarConnectionsItem) {
+  sidebarConnectionsItem.onclick = () => {
+    openConnectionsModal();
+    closeMobileSidebar();
+  };
+}
+
+if (sidebarGuestsItem) {
+  sidebarGuestsItem.onclick = () => {
+    openGuestsModal();
+    closeMobileSidebar();
+  };
+}
+
+if (sidebarRemoteItem) {
+  sidebarRemoteItem.onclick = () => {
+    openRemoteModal();
+    closeMobileSidebar();
+  };
+}
+
+if (sidebarSettingsItem) {
+  sidebarSettingsItem.onclick = () => {
+    settingsMsg.style.display = 'none';
+    settingsModal.classList.add('active');
+    closeMobileSidebar();
+  };
+}
+
 
 // Settings / Change Admin Password
 settingsBtn.onclick = () => {
@@ -1235,7 +1345,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     editorModal.classList.remove('active');
     closeMediaPreview();
-    qrModal.classList.remove('active');
+    if (remoteAccessModal) remoteAccessModal.classList.remove('active');
     settingsModal.classList.remove('active');
     connectionsModal.classList.remove('active');
     guestsModal.classList.remove('active');
@@ -1256,6 +1366,7 @@ sidebarBackdrop.onclick = closeMobileSidebar;
 
 // Initialize
 async function init() {
+  await checkAuth();
   await updateMetrics();
   await updateTunnelStatus();
   await loadDirectory();

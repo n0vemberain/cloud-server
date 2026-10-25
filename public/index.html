@@ -32,13 +32,13 @@
         </div>
 
         <div class="network-badges">
-          <div id="localIpBadge" class="badge badge-green" title="Local Network Address">
+          <div id="localIpBadge" class="badge badge-green" title="Local Wi-Fi Network">
             <span class="badge-dot"></span>
             <span id="localIpText">LAN: ...</span>
           </div>
-          <div id="tunnelBadge" class="badge badge-purple" title="Remote Internet Tunnel">
+          <div id="tunnelBadge" class="badge badge-purple" title="Click to Toggle Remote Internet Access">
             <span class="badge-dot"></span>
-            <span id="tunnelStatusText">Internet: Checking...</span>
+            <span id="tunnelStatusText">Remote: ...</span>
           </div>
         </div>
       </div>
@@ -48,12 +48,12 @@
           <circle cx="11" cy="11" r="8"></circle>
           <path d="m21 21-4.3-4.3"></path>
         </svg>
-        <input type="search" id="searchInput" placeholder="Search files in folder..." autocomplete="off">
+        <input type="search" id="searchInput" placeholder="Search files..." autocomplete="off">
       </div>
 
       <div class="header-right">
         <!-- Live Connections Button (Admin Only) -->
-        <button id="connectionsBtn" class="btn btn-secondary btn-sm admin-only" title="View Active Connections">
+        <button id="connectionsBtn" class="btn btn-secondary btn-sm admin-only" title="Active Connections">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -112,14 +112,15 @@
           <span class="btn-label-desktop">New File</span>
         </button>
 
-        <button id="qrModalBtn" class="icon-btn-ghost" title="Connect Mobile via QR Code">
+        <button id="remoteModalBtn" class="icon-btn-ghost admin-only" title="Remote Access & QR Code">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
           </svg>
         </button>
 
-        <button id="settingsBtn" class="icon-btn-ghost admin-only" title="Server Settings">
+        <button id="settingsBtn" class="icon-btn-ghost admin-only" title="Server Security Settings">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
             <circle cx="12" cy="12" r="3"></circle>
@@ -144,10 +145,63 @@
       <!-- Sidebar -->
       <aside id="appSidebar" class="app-sidebar">
         <div>
+          <!-- Quick Access Bookmarks -->
           <div class="sidebar-section">
             <div class="sidebar-section-title">Quick Access</div>
             <nav id="bookmarksNav">
               <!-- Dynamically rendered -->
+            </nav>
+          </div>
+
+          <!-- Admin Management Section in Sidebar (Guaranteed visibility on desktop/laptop) -->
+          <div class="sidebar-section admin-only">
+            <div class="sidebar-section-title">Admin Management</div>
+            <nav>
+              <div id="sidebarConnectionsItem" class="sidebar-nav-item">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </span>
+                <span style="flex: 1;">Connected Clients</span>
+                <span id="sidebarConnBadge" class="count-pill">1</span>
+              </div>
+
+              <div id="sidebarGuestsItem" class="sidebar-nav-item">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <line x1="19" y1="8" x2="19" y2="14"></line>
+                    <line x1="22" y1="11" x2="16" y2="11"></line>
+                  </svg>
+                </span>
+                <span>Guest Users</span>
+              </div>
+
+              <div id="sidebarRemoteItem" class="sidebar-nav-item">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                </span>
+                <span>Remote Access</span>
+              </div>
+
+              <div id="sidebarSettingsItem" class="sidebar-nav-item">
+                <span class="nav-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </span>
+                <span>Security Settings</span>
+              </div>
             </nav>
           </div>
         </div>
@@ -170,7 +224,7 @@
                 <line x1="2" y1="12" x2="22" y2="12"></line>
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
               </svg>
-              <span>Remote Access</span>
+              <span>Remote Access Control</span>
             </button>
           </div>
         </div>
@@ -180,8 +234,14 @@
       <main class="main-content">
         <!-- Content Toolbar -->
         <div class="content-toolbar">
-          <div id="breadcrumbsBar" class="breadcrumbs-bar">
-            <!-- Dynamically rendered -->
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+            <div id="breadcrumbsBar" class="breadcrumbs-bar">
+              <!-- Dynamically rendered -->
+            </div>
+            <!-- Current Folder Size Pill -->
+            <div id="folderStatsPill" class="folder-stats-pill" title="Size of current folder">
+              Loading...
+            </div>
           </div>
 
           <div class="toolbar-actions">
@@ -277,8 +337,9 @@
 
       <button id="mobileQrBtn" class="mobile-action-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
-          <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
         </svg>
         <span>Remote</span>
       </button>
@@ -311,6 +372,77 @@
     </div>
   </div>
 
+  <!-- DEDICATED REMOTE ACCESS & TUNNEL MODAL (ON/OFF TOGGLE) -->
+  <div id="remoteAccessModal" class="modal-overlay">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          <h3>Remote Internet Access Control</h3>
+        </div>
+        <button id="remoteCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <!-- Big Toggle Card -->
+        <div class="toggle-control-card">
+          <div class="toggle-info">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <h4 style="font-size: 15px; font-weight: 600;">Remote Internet Tunnel</h4>
+              <span id="remoteStatusBadge" class="conn-net-badge local">Checking...</span>
+            </div>
+            <p id="remoteStatusExplanation" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+              Manage whether this server is accessible over the global internet.
+            </p>
+          </div>
+
+          <label class="switch-control admin-only">
+            <input type="checkbox" id="remoteSwitchCheckbox">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Details when Remote is ON -->
+        <div id="remoteActiveSection" style="margin-top: 16px; display: none;">
+          <div class="qr-section">
+            <div style="font-size: 12px; font-weight: 600; color: var(--accent-green); margin-bottom: 6px;">
+              Public HTTPS Address:
+            </div>
+            <a id="remoteModalLink" href="#" target="_blank" class="url-text" style="font-size: 13px;">...</a>
+            <div style="margin-top: 8px;">
+              <button id="copyRemoteUrlBtn" class="btn btn-secondary btn-sm">Copy Link</button>
+            </div>
+            <img id="remoteModalQrImg" class="qr-img" style="margin-top: 12px;" alt="Remote QR Code" src="">
+            <p class="qr-hint">Scan with mobile phone to connect across cellular 4G/5G or remote Wi-Fi.</p>
+          </div>
+        </div>
+
+        <!-- Details when Remote is OFF (Local Only) -->
+        <div id="remoteInactiveSection" style="margin-top: 16px;">
+          <div class="qr-section" style="border-color: rgba(255, 214, 10, 0.3);">
+            <div style="font-size: 13px; font-weight: 600; color: var(--accent-yellow); margin-bottom: 6px;">
+              Server is strictly in Local Network Only Mode
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+              External internet traffic cannot reach your MacBook. Only devices connected to your same local Wi-Fi / LAN can access.
+            </p>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Local Network Address:</div>
+            <a id="localModalLink" href="#" target="_blank" class="url-text">...</a>
+            <img id="localModalQrImg" class="qr-img" style="margin-top: 10px;" alt="Local QR Code" src="">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Active Connections Modal (Admin Only) -->
   <div id="connectionsModal" class="modal-overlay">
     <div class="modal-window modal-window-large">
@@ -337,18 +469,12 @@
           <button id="tabHistoryBtn" class="tab-btn">Recent Access History</button>
         </div>
 
-        <!-- Active Connections Tab Content -->
         <div id="tabActiveContent">
-          <div id="activeConnectionsList" class="connections-list">
-            <!-- Dynamically populated -->
-          </div>
+          <div id="activeConnectionsList" class="connections-list"></div>
         </div>
 
-        <!-- Recent History Tab Content -->
         <div id="tabHistoryContent" style="display: none;">
-          <div id="historyConnectionsList" class="connections-list">
-            <!-- Dynamically populated -->
-          </div>
+          <div id="historyConnectionsList" class="connections-list"></div>
         </div>
       </div>
     </div>
@@ -375,7 +501,6 @@
         </button>
       </div>
       <div class="modal-body" style="padding: 18px;">
-        <!-- Add New Guest Form Card -->
         <div class="form-card">
           <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Create Guest Account</h4>
           <form id="createGuestForm">
@@ -417,9 +542,7 @@
 
         <div style="margin-top: 20px;">
           <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Existing Guests</h4>
-          <div id="guestsList" class="guests-list">
-            <!-- Dynamically populated -->
-          </div>
+          <div id="guestsList" class="guests-list"></div>
         </div>
       </div>
     </div>
@@ -489,60 +612,6 @@
     </div>
   </div>
 
-  <!-- Server QR & Remote Dashboard Modal -->
-  <div id="qrModal" class="modal-overlay">
-    <div class="modal-window">
-      <div class="modal-header">
-        <h3>Connect Devices & QR Code</h3>
-        <button id="qrCloseBtn" class="icon-btn-ghost" aria-label="Close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="qr-card-container">
-          <!-- Local Wi-Fi Section -->
-          <div class="qr-section">
-            <div class="qr-section-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 13a10 10 0 0 1 14 0"></path>
-                <path d="M8.5 16.5a5 5 0 0 1 7 0"></path>
-                <line x1="12" y1="20" x2="12.01" y2="20"></line>
-              </svg>
-              <h4>Local Wi-Fi Network Access</h4>
-            </div>
-            <a id="qrLocalLink" href="#" target="_blank" class="url-text">Loading...</a>
-            <img id="qrLocalImg" class="qr-img" alt="Local QR Code" src="">
-            <p class="qr-hint">Scan with mobile phone camera to open on the same local Wi-Fi network.</p>
-          </div>
-
-          <!-- Remote Internet Section -->
-          <div class="qr-section">
-            <div class="qr-section-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-              </svg>
-              <h4>Remote Internet Access (Any Network)</h4>
-            </div>
-            <div id="qrRemoteStatus" style="font-size: 13px; margin-bottom: 6px;"></div>
-            <a id="qrRemoteLink" href="#" target="_blank" class="url-text" style="display: none;"></a>
-            <img id="qrRemoteImg" class="qr-img" style="display: none;" alt="Remote QR Code" src="">
-            <div style="margin-top: 12px;" class="admin-only">
-              <button id="qrToggleTunnelBtn" class="btn btn-primary btn-sm">
-                Restart / Toggle Tunnel
-              </button>
-            </div>
-            <p class="qr-hint">Access your MacBook from cellular data (4G/5G) or any remote internet network worldwide.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Settings / Change Admin Password Modal -->
   <div id="settingsModal" class="modal-overlay">
     <div class="modal-window">
@@ -579,7 +648,7 @@
     </div>
   </div>
 
-  <!-- Prompt Modal (New folder, New file, Rename) -->
+  <!-- Prompt Modal -->
   <div id="promptModal" class="modal-overlay">
     <div class="modal-window">
       <div class="modal-header">

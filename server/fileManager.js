@@ -25,6 +25,42 @@ export function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// Calculate directory size and file count
+export async function getDirectorySize(dirPath, maxDepth = 2) {
+  let totalBytes = 0;
+  let fileCount = 0;
+  let folderCount = 0;
+
+  async function walk(currentPath, depth) {
+    if (depth > maxDepth) return;
+    try {
+      const entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.')) continue;
+        const full = path.join(currentPath, entry.name);
+        try {
+          if (entry.isDirectory()) {
+            folderCount++;
+            await walk(full, depth + 1);
+          } else if (entry.isFile()) {
+            const st = await fs.promises.stat(full);
+            totalBytes += st.size;
+            fileCount++;
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  await walk(dirPath, 0);
+  return {
+    totalBytes,
+    fileCount,
+    folderCount,
+    formatted: formatBytes(totalBytes)
+  };
+}
+
 export async function listDirectory(targetPath, showHidden = false) {
   const safePath = path.resolve(targetPath || os.homedir());
   
@@ -39,6 +75,9 @@ export async function listDirectory(targetPath, showHidden = false) {
 
   const entries = await fs.promises.readdir(safePath, { withFileTypes: true });
   const items = [];
+  let currentTotalBytes = 0;
+  let currentFileCount = 0;
+  let currentFolderCount = 0;
 
   for (const entry of entries) {
     if (!showHidden && entry.name.startsWith('.')) {
@@ -52,19 +91,38 @@ export async function listDirectory(targetPath, showHidden = false) {
       const mimeType = isDir ? 'folder' : (mime.lookup(itemPath) || 'application/octet-stream');
       const ext = path.extname(entry.name).toLowerCase();
 
+      let itemSize = 0;
+      let itemSizeFormatted = '--';
+      let itemCount = 0;
+
+      if (isDir) {
+        currentFolderCount++;
+        // Fast calculate folder size
+        const dirInfo = await getDirectorySize(itemPath, 2);
+        itemSize = dirInfo.totalBytes;
+        itemSizeFormatted = dirInfo.totalBytes > 0 ? dirInfo.formatted : 'Empty';
+        itemCount = dirInfo.fileCount;
+        currentTotalBytes += dirInfo.totalBytes;
+      } else {
+        currentFileCount++;
+        itemSize = itemStat.size;
+        itemSizeFormatted = formatBytes(itemStat.size);
+        currentTotalBytes += itemStat.size;
+      }
+
       items.push({
         name: entry.name,
         path: itemPath,
         isDirectory: isDir,
-        size: isDir ? 0 : itemStat.size,
-        sizeFormatted: isDir ? '--' : formatBytes(itemStat.size),
+        size: itemSize,
+        sizeFormatted: itemSizeFormatted,
+        itemCount,
         mtime: itemStat.mtime.toISOString(),
         mime: mimeType,
         extension: ext,
         isHidden: entry.name.startsWith('.')
       });
     } catch (err) {
-      // Skip files with strict permission locks (e.g. system files)
       continue;
     }
   }
@@ -97,7 +155,15 @@ export async function listDirectory(targetPath, showHidden = false) {
     parentPath: path.dirname(safePath) === safePath ? null : path.dirname(safePath),
     breadcrumbs,
     items,
-    bookmarks: getBookmarks()
+    bookmarks: getBookmarks(),
+    folderStats: {
+      totalFiles: currentFileCount,
+      totalFolders: currentFolderCount,
+      totalItems: currentFileCount + currentFolderCount,
+      totalBytes: currentTotalBytes,
+      totalFormatted: formatBytes(currentTotalBytes),
+      summary: `${currentFileCount + currentFolderCount} items (${formatBytes(currentTotalBytes)})`
+    }
   };
 }
 
@@ -159,7 +225,6 @@ export async function deleteItem(targetPath, permanent = false) {
     throw new Error('Item does not exist');
   }
 
-  // Prevent deleting critical root folders
   const protectedPaths = ['/', '/System', '/Library', '/bin', '/sbin', '/usr', os.homedir()];
   if (protectedPaths.includes(safePath)) {
     throw new Error('Cannot delete protected system or home directory');
@@ -175,9 +240,7 @@ export async function deleteItem(targetPath, permanent = false) {
         }
         await fs.promises.rename(safePath, dest);
         return { success: true, trashed: true, path: safePath };
-      } catch (err) {
-        // If moving to trash fails (e.g. cross-partition), proceed to permanent rm
-      }
+      } catch (err) {}
     }
   }
 
@@ -211,9 +274,7 @@ export async function searchInDirectory(targetDir, query, maxResults = 50) {
           await walk(fullPath, depth + 1);
         }
       }
-    } catch (e) {
-      // Ignore directory read errors
-    }
+    } catch (e) {}
   }
 
   await walk(path.resolve(targetDir));
