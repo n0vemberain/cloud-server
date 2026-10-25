@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Mac Cloud Server — Personal Cloud</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="app-header glass-panel">
+      <div class="header-left">
+        <button id="menuToggleBtn" class="icon-btn-ghost menu-toggle-btn" title="Toggle Navigation Menu" aria-label="Toggle Navigation Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
+
+        <div class="app-title-group">
+          <div class="server-badge-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+          </div>
+          <h1 id="headerServerName">Mac Server</h1>
+        </div>
+
+        <div class="network-badges">
+          <div id="localIpBadge" class="badge badge-green" title="Local Network Address">
+            <span class="badge-dot"></span>
+            <span id="localIpText">LAN: ...</span>
+          </div>
+          <div id="tunnelBadge" class="badge badge-purple" title="Remote Internet Tunnel">
+            <span class="badge-dot"></span>
+            <span id="tunnelStatusText">Internet: Checking...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-search">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+        <input type="search" id="searchInput" placeholder="Search files in folder..." autocomplete="off">
+      </div>
+
+      <div class="header-right">
+        <!-- Live Connections Button (Admin Only) -->
+        <button id="connectionsBtn" class="btn btn-secondary btn-sm admin-only" title="View Active Connections">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span class="btn-label-desktop">Connected</span>
+          <span id="activeConnectionsBadge" class="count-pill">1</span>
+        </button>
+
+        <!-- Guest Users Button (Admin Only) -->
+        <button id="guestsBtn" class="btn btn-secondary btn-sm admin-only" title="Manage Guest Accounts">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+          <span class="btn-label-desktop">Guests</span>
+        </button>
+
+        <div id="batteryBadge" class="badge" title="MacBook Battery">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="16" height="10" x="2" y="7" rx="2" ry="2"></rect>
+            <line x1="22" y1="11" x2="22" y2="13"></line>
+          </svg>
+          <span id="batteryText">...</span>
+        </div>
+
+        <input type="file" id="fileUploadInput" multiple style="display: none;">
+        <button id="uploadBtn" class="btn btn-primary btn-sm write-only" title="Upload Files">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span class="btn-label-desktop">Upload</span>
+        </button>
+
+        <button id="newFolderBtn" class="btn btn-secondary btn-sm write-only" title="New Folder">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+            <line x1="12" y1="10" x2="12" y2="16"></line>
+            <line x1="9" y1="13" x2="15" y2="13"></line>
+          </svg>
+          <span class="btn-label-desktop">New Folder</span>
+        </button>
+
+        <button id="newFileBtn" class="btn btn-secondary btn-sm write-only" title="New File">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+            <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+          <span class="btn-label-desktop">New File</span>
+        </button>
+
+        <button id="qrModalBtn" class="icon-btn-ghost" title="Connect Mobile via QR Code">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+        </button>
+
+        <button id="settingsBtn" class="icon-btn-ghost admin-only" title="Server Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+
+        <button id="logoutBtn" class="icon-btn-ghost" title="Sign Out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- App Body -->
+    <div class="app-body">
+      <!-- Sidebar Drawer Overlay for Mobile -->
+      <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+      <!-- Sidebar -->
+      <aside id="appSidebar" class="app-sidebar">
+        <div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-title">Quick Access</div>
+            <nav id="bookmarksNav">
+              <!-- Dynamically rendered -->
+            </nav>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="storage-widget">
+            <div class="storage-label">
+              <span>Mac Storage</span>
+              <span id="storageStats">...</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div id="storageBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="remote-tunnel-widget admin-only">
+            <button id="tunnelToggleBtn" class="btn btn-secondary btn-sm btn-block">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+              <span>Remote Access</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- Content Toolbar -->
+        <div class="content-toolbar">
+          <div id="breadcrumbsBar" class="breadcrumbs-bar">
+            <!-- Dynamically rendered -->
+          </div>
+
+          <div class="toolbar-actions">
+            <button id="downloadFolderBtn" class="icon-btn-ghost download-only" title="Download Folder as ZIP Archive">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                <rect width="22" height="5" x="1" y="3" rx="1"></rect>
+                <line x1="10" y1="12" x2="14" y2="12"></line>
+              </svg>
+            </button>
+
+            <button id="hiddenFilesBtn" class="icon-btn-ghost" title="Toggle Hidden Files">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+
+            <button id="viewToggleBtn" class="icon-btn-ghost" title="Toggle Grid / List View">
+              <svg id="viewToggleIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+            </button>
+
+            <select id="sortSelect" class="btn-sm sort-dropdown">
+              <option value="name">Sort by Name</option>
+              <option value="date">Sort by Date</option>
+              <option value="size">Sort by Size</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- File View -->
+        <div id="fileViewContainer" class="file-view-container">
+          <div id="fileGrid" class="file-grid"></div>
+          <table id="fileTable" class="file-table" style="display: none;">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Modified</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="fileTableBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon-wrap">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+              </svg>
+            </div>
+            <p>This directory is empty</p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Action Bar -->
+    <div class="mobile-bottom-bar">
+      <button id="mobileUploadBtn" class="mobile-action-btn write-only">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <span>Upload</span>
+      </button>
+
+      <button id="mobileNewFolderBtn" class="mobile-action-btn write-only">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>
+          <line x1="12" y1="10" x2="12" y2="16"></line>
+          <line x1="9" y1="13" x2="15" y2="13"></line>
+        </svg>
+        <span>Folder</span>
+      </button>
+
+      <button id="mobileConnectionsBtn" class="mobile-action-btn admin-only">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        <span>Users</span>
+      </button>
+
+      <button id="mobileQrBtn" class="mobile-action-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
+          <line x1="12" y1="18" x2="12.01" y2="18"></line>
+        </svg>
+        <span>Remote</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Drag and Drop Overlay -->
+  <div id="dropzoneOverlay" class="dropzone-overlay">
+    <div class="dropzone-content">
+      <div class="drop-icon">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+      </div>
+      <h2>Drop Files to Upload</h2>
+      <p>Files will be securely uploaded to the current directory</p>
+    </div>
+  </div>
+
+  <!-- Upload Status Floating Bar -->
+  <div id="uploadStatus" class="upload-status-bar">
+    <div class="spinner"></div>
+    <div style="flex: 1; min-width: 0;">
+      <div id="uploadText" style="font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Uploading...</div>
+      <div class="progress-bar-bg" style="margin-top: 6px;">
+        <div id="uploadProgressFill" class="progress-bar-fill" style="width: 0%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Connections Modal (Admin Only) -->
+  <div id="connectionsModal" class="modal-overlay">
+    <div class="modal-window modal-window-large">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <h3>Connected Clients & Access Log</h3>
+        </div>
+        <button id="connectionsCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <div class="tab-header">
+          <button id="tabActiveBtn" class="tab-btn active">Active Connections</button>
+          <button id="tabHistoryBtn" class="tab-btn">Recent Access History</button>
+        </div>
+
+        <!-- Active Connections Tab Content -->
+        <div id="tabActiveContent">
+          <div id="activeConnectionsList" class="connections-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Recent History Tab Content -->
+        <div id="tabHistoryContent" style="display: none;">
+          <div id="historyConnectionsList" class="connections-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Guest User Management Modal (Admin Only) -->
+  <div id="guestsModal" class="modal-overlay">
+    <div class="modal-window modal-window-large">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <line x1="19" y1="8" x2="19" y2="14"></line>
+            <line x1="22" y1="11" x2="16" y2="11"></line>
+          </svg>
+          <h3>Guest Users Management</h3>
+        </div>
+        <button id="guestsCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 18px;">
+        <!-- Add New Guest Form Card -->
+        <div class="form-card">
+          <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Create Guest Account</h4>
+          <form id="createGuestForm">
+            <div class="grid-form">
+              <div class="input-group">
+                <label>Guest Username</label>
+                <input type="text" id="guestUsername" placeholder="e.g. friend, client" required autocomplete="off">
+              </div>
+              <div class="input-group">
+                <label>Guest Password</label>
+                <input type="password" id="guestPassword" placeholder="Minimum 4 characters" required minlength="4">
+              </div>
+            </div>
+
+            <div class="checkbox-group" style="margin: 12px 0;">
+              <label class="checkbox-label">
+                <input type="checkbox" id="permDownload" checked>
+                <span>Allow File Downloads</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="permWrite">
+                <span>Allow File Upload & Editing</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="permDelete">
+                <span>Allow Deleting Files</span>
+              </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add Guest User</span>
+            </button>
+          </form>
+        </div>
+
+        <div style="margin-top: 20px;">
+          <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 10px;">Existing Guests</h4>
+          <div id="guestsList" class="guests-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code/Text Editor Modal -->
+  <div id="editorModal" class="modal-overlay">
+    <div class="modal-window modal-window-fullscreen">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <h3 id="editorFileName" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Editor</h3>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="editorSaveBtn" class="btn btn-primary btn-sm write-only">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span>Save (Cmd+S)</span>
+          </button>
+          <button id="editorCloseBtn" class="icon-btn-ghost" aria-label="Close Editor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="code-editor-wrapper">
+          <textarea id="editorTextarea" class="code-editor-textarea" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Media Preview Modal -->
+  <div id="previewModal" class="modal-overlay">
+    <div class="modal-window modal-window-fullscreen">
+      <div class="modal-header">
+        <h3 id="previewTitle" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Preview</h3>
+        <div style="display: flex; gap: 8px;">
+          <a id="previewDownloadBtn" class="btn btn-secondary btn-sm download-only" download>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download</span>
+          </a>
+          <button id="previewCloseBtn" class="icon-btn-ghost" aria-label="Close Preview">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div id="previewContent" class="preview-center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Server QR & Remote Dashboard Modal -->
+  <div id="qrModal" class="modal-overlay">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Connect Devices & QR Code</h3>
+        <button id="qrCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="qr-card-container">
+          <!-- Local Wi-Fi Section -->
+          <div class="qr-section">
+            <div class="qr-section-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 13a10 10 0 0 1 14 0"></path>
+                <path d="M8.5 16.5a5 5 0 0 1 7 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+              <h4>Local Wi-Fi Network Access</h4>
+            </div>
+            <a id="qrLocalLink" href="#" target="_blank" class="url-text">Loading...</a>
+            <img id="qrLocalImg" class="qr-img" alt="Local QR Code" src="">
+            <p class="qr-hint">Scan with mobile phone camera to open on the same local Wi-Fi network.</p>
+          </div>
+
+          <!-- Remote Internet Section -->
+          <div class="qr-section">
+            <div class="qr-section-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+              <h4>Remote Internet Access (Any Network)</h4>
+            </div>
+            <div id="qrRemoteStatus" style="font-size: 13px; margin-bottom: 6px;"></div>
+            <a id="qrRemoteLink" href="#" target="_blank" class="url-text" style="display: none;"></a>
+            <img id="qrRemoteImg" class="qr-img" style="display: none;" alt="Remote QR Code" src="">
+            <div style="margin-top: 12px;" class="admin-only">
+              <button id="qrToggleTunnelBtn" class="btn btn-primary btn-sm">
+                Restart / Toggle Tunnel
+              </button>
+            </div>
+            <p class="qr-hint">Access your MacBook from cellular data (4G/5G) or any remote internet network worldwide.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings / Change Admin Password Modal -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Admin Security Settings</h3>
+        <button id="settingsCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="changePasswordForm">
+        <div class="modal-body">
+          <div class="input-group" style="margin-bottom: 14px;">
+            <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+              Current Admin Password
+            </label>
+            <input type="password" id="currentPassInput" placeholder="Default: mac1234">
+          </div>
+          <div class="input-group" style="margin-bottom: 14px;">
+            <label style="font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+              New Admin Password
+            </label>
+            <input type="password" id="newPassInput" required minlength="4" placeholder="Minimum 4 characters">
+          </div>
+          <div id="settingsMsg" style="display: none; font-size: 13px; padding: 10px; border-radius: 8px;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="settingsCancelBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Prompt Modal (New folder, New file, Rename) -->
+  <div id="promptModal" class="modal-overlay">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 id="promptTitle">Prompt</h3>
+        <button id="promptCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="promptForm">
+        <div class="modal-body">
+          <input type="text" id="promptInput" required autofocus autocomplete="off">
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="promptCancelBtn" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="promptSubmitBtn" class="btn btn-primary">Confirm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Item Context / Action Bottom Sheet Modal (Mobile & Tablet) -->
+  <div id="itemActionModal" class="modal-overlay modal-bottom-sheet">
+    <div class="modal-window action-sheet-window">
+      <div class="modal-header">
+        <h3 id="actionSheetItemName" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px;">Options</h3>
+        <button id="actionSheetCloseBtn" class="icon-btn-ghost" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="action-sheet-body">
+        <button id="sheetOpenBtn" class="action-sheet-item">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+          <span id="sheetOpenLabel">Open</span>
+        </button>
+        <button id="sheetDownloadBtn" class="action-sheet-item download-only">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span id="sheetDownloadLabel">Download</span>
+        </button>
+        <button id="sheetRenameBtn" class="action-sheet-item write-only">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>
+          <span>Rename</span>
+        </button>
+        <button id="sheetDeleteBtn" class="action-sheet-item danger delete-only">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+          <span>Move to Trash</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifications container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

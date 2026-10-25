@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local runtime data & credentials
+data/
+*.log
+
+# Pre-compiled binaries (downloaded automatically by start.sh)
+bin/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment variables
+.env
+.env.local
