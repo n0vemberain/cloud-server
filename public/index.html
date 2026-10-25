@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Mac Cloud Server — Personal Cloud</title>
+  <title>Personal Cloud Server</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
               <line x1="6" y1="18" x2="6.01" y2="18"></line>
             </svg>
           </div>
-          <h1 id="headerServerName">Mac Server</h1>
+          <h1 id="headerServerName">Cloud Server</h1>
         </div>
 
         <div class="network-badges">
@@ -48,7 +48,7 @@
       </div>
 
       <div class="header-right">
-        <div id="batteryBadge" class="badge" title="MacBook Battery">
+        <div id="batteryBadge" class="badge" title="Device Battery">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect width="16" height="10" x="2" y="7" rx="2" ry="2"></rect>
             <line x1="22" y1="11" x2="22" y2="13"></line>
@@ -149,7 +149,7 @@
         <div class="sidebar-footer">
           <div class="storage-widget">
             <div class="storage-label">
-              <span>Mac Storage</span>
+              <span>System Storage</span>
               <span id="storageStats">...</span>
             </div>
             <div class="progress-bar-bg">
@@ -484,9 +484,9 @@
           <!-- Server Name Customization Card -->
           <div class="settings-card">
             <h4 class="settings-card-title">Server Identity</h4>
-            <p class="settings-card-desc">Set a custom name for your Mac server. It updates the header, browser title, and client identification.</p>
+            <p class="settings-card-desc">Set a custom name for your cloud server. It updates the header, browser title, and client identification.</p>
             <form id="serverNameForm" style="display: flex; gap: 10px; margin-top: 12px; align-items: center;">
-              <input type="text" id="serverNameInput" placeholder="e.g. My Mac Cloud, Fatin's MacBook Server" required style="flex: 1;">
+              <input type="text" id="serverNameInput" placeholder="e.g. My Cloud Server, Home Server" required style="flex: 1;">
               <button type="submit" class="btn btn-primary btn-sm" style="flex-shrink: 0;">Save Name</button>
             </form>
           </div>
@@ -497,7 +497,7 @@
               <h4 class="settings-card-title">Local Network Access (LAN / Same Wi-Fi)</h4>
               <span class="conn-net-badge local">Local LAN</span>
             </div>
-            <p class="settings-card-desc">Use this address to access your MacBook from any phone, laptop, or tablet on your same local Wi-Fi.</p>
+            <p class="settings-card-desc">Use this address to access your computer from any phone, laptop, or tablet on your same local Wi-Fi.</p>
             
             <div class="url-display-box" style="margin: 12px 0;">
               <a id="settingsLocalUrl" href="#" target="_blank" class="url-text">http://...</a>

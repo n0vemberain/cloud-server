@@ -20,7 +20,7 @@ function hashPassword(password, salt) {
 const defaultConfig = {
   port: parseInt(process.env.PORT || '7890', 10),
   host: '0.0.0.0',
-  serverName: `${os.hostname()}'s Mac Server`,
+  serverName: `${os.hostname()}'s Cloud Server`,
   defaultRootDir: os.homedir(),
   sessionSecret: crypto.randomBytes(32).toString('hex'),
   // Default master password is 'mac1234' unless changed

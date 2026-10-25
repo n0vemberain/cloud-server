@@ -70,7 +70,7 @@ export function authMiddleware(req, res, next) {
     return next();
   }
 
-  let token = req.cookies?.mac_token;
+  let token = req.cookies?.cloud_token || req.cookies?.mac_token;
   if (!token && req.headers.authorization?.startsWith('Bearer ')) {
     token = req.headers.authorization.substring(7);
   }
@@ -81,6 +81,7 @@ export function authMiddleware(req, res, next) {
   const payload = verifyToken(token, cfg);
   if (payload) {
     if (payload.sessionId && isSessionRevoked(payload.sessionId)) {
+      res.clearCookie('cloud_token');
       res.clearCookie('mac_token');
       if (req.path.startsWith('/api/')) {
         return res.status(401).json({ success: false, error: 'Session was disconnected by administrator. Please log in again.' });
@@ -170,12 +171,14 @@ export function handleLogin(req, res) {
   // Record connection session (Local vs Remote, device info, IP)
   recordSession(sessionId, payload.username, payload.role, req);
 
-  res.cookie('mac_token', token, {
+  const cookieOpts = {
     httpOnly: true,
     maxAge: 30 * 24 * 60 * 60 * 1000,
     sameSite: 'lax',
     secure: false
-  });
+  };
+  res.cookie('cloud_token', token, cookieOpts);
+  res.cookie('mac_token', token, cookieOpts);
 
   return res.json({
     success: true,
@@ -195,15 +198,17 @@ export function handleLogout(req, res) {
   if (req.user?.sessionId) {
     revokeSession(req.user.sessionId);
   }
+  res.clearCookie('cloud_token');
   res.clearCookie('mac_token');
   return res.json({ success: true });
 }
 
 export function handleAuthStatus(req, res) {
   const cfg = loadConfig();
-  const token = req.cookies?.mac_token || req.headers.authorization?.replace('Bearer ', '');
+  const token = req.cookies?.cloud_token || req.cookies?.mac_token || req.headers.authorization?.replace('Bearer ', '');
   const payload = verifyToken(token, cfg);
   if (payload && payload.sessionId && isSessionRevoked(payload.sessionId)) {
+    res.clearCookie('cloud_token');
     res.clearCookie('mac_token');
     return res.status(401).json({
       authenticated: false,

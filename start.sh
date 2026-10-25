@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-# Mac Cloud Server — Launcher
+# Personal Cloud Server — Launcher
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR"
 
-echo "Starting Mac Cloud Server..."
+echo "Starting Personal Cloud Server..."
 
 # Check Node.js
 if ! command -v node &> /dev/null; then

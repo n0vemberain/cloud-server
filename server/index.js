@@ -18,11 +18,11 @@ async function main() {
 
     console.clear();
     console.log('\x1b[36m%s\x1b[0m', '===============================================================');
-    console.log('\x1b[1m\x1b[32m%s\x1b[0m', `  Mac Cloud Server — Running Successfully`);
+    console.log('\x1b[1m\x1b[32m%s\x1b[0m', `  Personal Cloud Server — Running Successfully`);
     console.log('\x1b[36m%s\x1b[0m', '===============================================================');
     console.log(`\n\x1b[1m[1] Local Network Access (Same Wi-Fi / LAN):\x1b[0m`);
     console.log(`    Local URL: \x1b[34m\x1b[4m${localUrl}\x1b[0m`);
-    console.log(`    Loopback:  \x1b[90m${loopbackUrl}\x1b[0m (Directly on this Mac)`);
+    console.log(`    Loopback:  \x1b[90m${loopbackUrl}\x1b[0m (Directly on this machine)`);
 
     if (localIps.length > 1) {
       console.log(`    Other Local IPs:`);

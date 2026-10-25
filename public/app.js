@@ -1772,8 +1772,8 @@ function updateRemoteModalUI(data) {
   }
   if (remoteStatusExplanation) {
     remoteStatusExplanation.textContent = isOnline
-      ? 'Your MacBook is securely reachable over the global internet via encrypted Cloudflare Tunnel.'
-      : 'Remote tunnel is off. External internet traffic cannot reach your Mac. Only devices on your Wi-Fi / LAN can access.';
+      ? 'Your computer is securely reachable over the global internet via encrypted Cloudflare Tunnel.'
+      : 'Remote tunnel is off. External internet traffic cannot reach your computer. Only devices on your Wi-Fi / LAN can access.';
   }
 
   if (isOnline) {
@@ -2353,6 +2353,7 @@ if (markAllNotifsReadBtn) {
 
 // Dedicated Messages & Chat Management
 let cachedChatMessages = [];
+let activeReplyMessageId = null;
 
 function openMessagesModal(recipientId = null) {
   if (!messagesModal) return;
@@ -2551,6 +2552,7 @@ function renderChatMessages(forceScroll = false) {
     const replyBtn = card.querySelector('.reply-msg-btn');
     if (replyBtn) {
       replyBtn.onclick = () => {
+        activeReplyMessageId = m.id;
         const targetRecipientId = m.senderRole === 'admin' ? 'admin' : m.senderId;
         if (chatRecipientSelect) {
           chatRecipientSelect.value = targetRecipientId;
@@ -2645,18 +2647,31 @@ if (chatSendMessageForm) {
     const text = chatMessageInput.value.trim();
     if (!text) return;
     const recipientId = chatRecipientSelect ? chatRecipientSelect.value : 'all';
+    const repliedMsgId = activeReplyMessageId;
 
     try {
       const res = await fetch('/api/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientId, text })
+        body: JSON.stringify({ recipientId, text, replyToMessageId: repliedMsgId })
       });
       const data = await res.json();
       if (data.success) {
         showToast('Message sent');
         chatMessageInput.value = '';
         chatMessageInput.placeholder = 'Type your message here...';
+
+        if (repliedMsgId) {
+          try {
+            await fetch('/api/messages/read', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: repliedMsgId })
+            });
+          } catch (e) {}
+          activeReplyMessageId = null;
+        }
+
         await loadChatMessages(true);
         updateNotificationsSummary();
       } else {

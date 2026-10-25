@@ -7,6 +7,7 @@ A modern, responsive personal cloud server application. Turn your computer into 
 ## Table of Contents
 
 - Overview
+- Default Administrator Credentials
 - Key Features
 - Technology Stack
 - Step-by-Step Installation & Quick Start
@@ -19,7 +20,18 @@ A modern, responsive personal cloud server application. Turn your computer into 
 
 ## Overview
 
-Personal Cloud Server is a lightweight, self-hosted cloud platform built on Node.js and Express. It enables users to browse, stream, edit, upload, and download files from their computer remotely from any mobile or desktop web browser. It features dual network access (LAN direct access and encrypted Cloudflare Quick Tunnels), role-based multi-user support (Admin and Guest accounts), real-time notifications with download auditing, live direct messaging, and active session management with one-click revocation.
+Personal Cloud Server is a lightweight, self-hosted cloud platform built on Node.js and Express. It enables users to browse, stream, edit, upload, and download files from their computer remotely from any mobile or desktop web browser. It features dual network access (LAN direct access and encrypted Cloudflare Quick Tunnels), role-based multi-user support (Admin and Guest accounts), real-time notifications with download auditing, live direct messaging with auto-read on reply, and active session management with one-click revocation.
+
+---
+
+## Default Administrator Credentials
+
+Upon fresh installation, use the following default administrator credentials to log in:
+
+- **Username**: `admin`
+- **Password**: `mac1234`
+
+After logging in, you can change your administrator password, customize your display name, and manage guest accounts anytime via **Settings & Administration -> Profile** or **Settings & Administration -> Security**.
 
 ---
 
@@ -45,6 +57,7 @@ Personal Cloud Server is a lightweight, self-hosted cloud platform built on Node
 
 ### 4. Interactive Messaging & Server Chat
 - **Direct Messaging**: Private communication channel between Administrator and Guest users.
+- **Auto Mark-as-Read on Reply**: When clicking "Reply" on any message and sending your response, the original message is automatically marked as read in real time.
 - **Server Chat Room**: Public announcement and discussion channel accessible to all connected users.
 - **Unread Counters**: Real-time unread badges on the chat bubble icon in the top header.
 
@@ -87,8 +100,8 @@ Personal Cloud Server is a lightweight, self-hosted cloud platform built on Node
 
 ### 1. Clone or Download the Repository
 ```bash
-git clone https://github.com/fatinishraque/personal-cloud-server.git
-cd "local server"
+git clone https://github.com/n0vemberain/cloud-server.git
+cd cloud-server
 ```
 
 ### 2. Install Dependencies
@@ -126,10 +139,11 @@ chmod +x start.sh
 When the server starts, the console will output:
 - **Local Access URL**: e.g., `http://192.168.1.100:7890`
 - **Remote Access URL**: e.g., `https://xxxx.trycloudflare.com` (if tunnel is active)
+- **Initial Admin Username**: `admin`
 - **Initial Admin Password**: `mac1234`
 - **QR Code**: Scan with your mobile device camera to open the interface immediately.
 
-Open the URL in any browser, log in with the administrator password, and configure your administrator profile and guests in **Settings & Administration**.
+Open the URL in any browser, log in with the administrator credentials, and configure your profile and guests in **Settings & Administration**.
 
 ---
 
@@ -180,7 +194,7 @@ Server settings can be managed directly from the **Settings & Administration** w
 {
   "port": 7890,
   "host": "0.0.0.0",
-  "serverName": "Personal Cloud",
+  "serverName": "Personal Cloud Server",
   "defaultRootDir": "/Users/username",
   "autoTunnel": true,
   "adminName": "Administrator"
@@ -221,7 +235,7 @@ Server settings can be managed directly from the **Settings & Administration** w
 
 ### Messaging & Chat
 - `GET /api/messages` - Retrieve chat history for the authenticated user.
-- `POST /api/messages/send` - Send a message to a specific user or server channel.
+- `POST /api/messages/send` - Send a message (supports `replyToMessageId` to auto-read the replied message).
 - `GET /api/messages/recipients` - List eligible message recipients.
 - `POST /api/messages/read` - Mark messages as read.
 

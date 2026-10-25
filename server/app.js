@@ -279,6 +279,13 @@ export function createApp() {
     try {
       const messageText = req.body?.message || req.body?.text;
       const recipientId = req.body?.recipientId || 'admin';
+      const replyToMessageId = req.body?.replyToMessageId;
+      if (replyToMessageId) {
+        try {
+          markMessageAsRead(replyToMessageId, req.user);
+        } catch (e) {}
+      }
+
       const allGuests = getGuests();
       const targetGuest = allGuests.find(g => g.id === recipientId || g.username.toLowerCase() === recipientId.toLowerCase());
       const recipient = {
@@ -503,7 +510,7 @@ export function createApp() {
       }
       const safePath = path.resolve(rawPath.trim());
       if (!fs.existsSync(safePath)) {
-        return res.status(404).json({ success: false, error: 'Directory does not exist on this Mac.' });
+        return res.status(404).json({ success: false, error: 'Directory does not exist on this machine.' });
       }
       const stat = fs.statSync(safePath);
       if (!stat.isDirectory()) {
