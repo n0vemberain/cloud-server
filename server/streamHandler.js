@@ -2,9 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import mime from 'mime-types';
 import { ZipArchive } from 'archiver';
+import { isPathAllowedForUser } from './fileManager.js';
 
 export async function handleFileDownload(req, res) {
   const targetPath = path.resolve(req.query.path);
+
+  if (!isPathAllowedForUser(targetPath, req.user)) {
+    return res.status(403).json({ success: false, error: 'Access denied. You do not have permission to download this item.' });
+  }
 
   if (!fs.existsSync(targetPath)) {
     return res.status(404).json({ success: false, error: 'File not found' });
@@ -44,6 +49,10 @@ export async function handleFileDownload(req, res) {
 
 export async function handleFileStream(req, res) {
   const targetPath = path.resolve(req.query.path);
+
+  if (!isPathAllowedForUser(targetPath, req.user)) {
+    return res.status(403).send('Access denied');
+  }
 
   if (!fs.existsSync(targetPath)) {
     return res.status(404).send('File not found');

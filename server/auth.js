@@ -19,6 +19,7 @@ export function generateToken(user, cfg) {
   const payload = {
     auth: true,
     sessionId,
+    name: user.name || user.username,
     username: user.username,
     role: user.role,
     permissions: user.permissions,
@@ -82,8 +83,11 @@ export function authMiddleware(req, res, next) {
     if (payload.role === 'guest') {
       const guests = loadGuests();
       const currentGuest = guests.find(g => g.username.toLowerCase() === payload.username.toLowerCase());
-      if (currentGuest && currentGuest.permissions) {
-        payload.permissions = currentGuest.permissions;
+      if (currentGuest) {
+        payload.name = currentGuest.name || currentGuest.username;
+        if (currentGuest.permissions) {
+          payload.permissions = currentGuest.permissions;
+        }
         payload.id = currentGuest.id;
       }
     }
@@ -169,6 +173,8 @@ export function handleLogin(req, res) {
     success: true,
     token,
     user: {
+      id: payload.id,
+      name: payload.name || payload.username,
       username: payload.username,
       role: payload.role,
       permissions: payload.permissions
@@ -192,14 +198,23 @@ export function handleAuthStatus(req, res) {
   if (payload && payload.role === 'guest') {
     const guests = loadGuests();
     const currentGuest = guests.find(g => g.username.toLowerCase() === payload.username.toLowerCase());
-    if (currentGuest && currentGuest.permissions) {
-      payload.permissions = currentGuest.permissions;
+    if (currentGuest) {
+      payload.name = currentGuest.name || currentGuest.username;
+      if (currentGuest.permissions) {
+        payload.permissions = currentGuest.permissions;
+      }
       payload.id = currentGuest.id;
     }
   }
   return res.json({
     authenticated: !!payload,
-    user: payload ? { id: payload.id, username: payload.username, role: payload.role, permissions: payload.permissions } : null,
+    user: payload ? {
+      id: payload.id,
+      name: payload.name || payload.username,
+      username: payload.username,
+      role: payload.role,
+      permissions: payload.permissions
+    } : null,
     isConfigured: cfg.isConfigured,
     serverName: cfg.serverName
   });

@@ -3,9 +3,46 @@ import path from 'path';
 import os from 'os';
 import mime from 'mime-types';
 
-export function getBookmarks() {
+export function getAllowedGuestPaths(user) {
+  const home = os.homedir();
+  const fa = user?.permissions?.folderAccess || {};
+  const allowed = [];
+  if (fa.desktop) allowed.push(path.resolve(path.join(home, 'Desktop')));
+  if (fa.documents) allowed.push(path.resolve(path.join(home, 'Documents')));
+  if (fa.downloads) allowed.push(path.resolve(path.join(home, 'Downloads')));
+  return allowed;
+}
+
+export function isPathAllowedForUser(targetPath, user) {
+  if (!user || user.role === 'admin') return true;
+  if (!targetPath) return false;
+  const safe = path.resolve(targetPath);
+  const allowed = getAllowedGuestPaths(user);
+  if (allowed.length === 0) return false;
+  return allowed.some(base => safe === base || safe.startsWith(base + path.sep));
+}
+
+export function getBookmarks(user = null) {
   const home = os.homedir();
   const isWin = process.platform === 'win32';
+
+  // For Guests: only include Desktop, Documents, Downloads if granted by admin
+  if (user && user.role === 'guest') {
+    const fa = user.permissions?.folderAccess || {};
+    const guestBookmarks = [];
+    if (fa.desktop) {
+      guestBookmarks.push({ name: 'Desktop', path: path.join(home, 'Desktop'), icon: 'desktop' });
+    }
+    if (fa.documents) {
+      guestBookmarks.push({ name: 'Documents', path: path.join(home, 'Documents'), icon: 'document' });
+    }
+    if (fa.downloads) {
+      guestBookmarks.push({ name: 'Downloads', path: path.join(home, 'Downloads'), icon: 'download' });
+    }
+    return guestBookmarks.filter(b => fs.existsSync(b.path));
+  }
+
+  // For Admin: full Quick Access to all directories
   const rootDrive = isWin ? (process.env.SystemDrive || 'C:') + '\\' : '/';
   const rootLabel = isWin ? `Local Disk (${rootDrive})` : 'Root (Macintosh HD)';
 
@@ -69,9 +106,31 @@ export async function getDirectorySize(dirPath, maxDepth = 2) {
   };
 }
 
-export async function listDirectory(targetPath, showHidden = false) {
-  const safePath = path.resolve(targetPath || os.homedir());
-  
+export async function listDirectory(targetPath, showHidden = false, user = null) {
+  let safePath = targetPath ? path.resolve(targetPath) : null;
+  const home = os.homedir();
+  const isGuest = user && user.role === 'guest';
+  let guestAllowedBases = [];
+  let currentGuestBase = null;
+
+  if (isGuest) {
+    guestAllowedBases = getAllowedGuestPaths(user);
+    if (guestAllowedBases.length === 0) {
+      throw new Error('Access denied. No folder permissions have been granted to your guest account. Please contact the administrator.');
+    }
+
+    // If safePath is not given, or not permitted, default to first allowed folder
+    if (!safePath || !isPathAllowedForUser(safePath, user)) {
+      safePath = guestAllowedBases[0];
+    }
+
+    currentGuestBase = guestAllowedBases.find(b => safePath === b || safePath.startsWith(b + path.sep));
+  } else {
+    if (!safePath) {
+      safePath = home;
+    }
+  }
+
   if (!fs.existsSync(safePath)) {
     throw new Error('Directory does not exist');
   }
@@ -159,30 +218,52 @@ export async function listDirectory(targetPath, showHidden = false) {
   });
 
   // Calculate breadcrumbs
-  const parts = safePath.split(path.sep);
   const breadcrumbs = [];
-  let currentAcc = '';
-  
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (i === 0 && part === '') {
-      currentAcc = '/';
-      breadcrumbs.push({ name: 'Root', path: '/' });
-    } else if (i === 0 && /^[a-zA-Z]:$/.test(part)) {
-      currentAcc = part + path.sep;
-      breadcrumbs.push({ name: part, path: currentAcc });
-    } else if (part) {
-      currentAcc = currentAcc ? path.join(currentAcc, part) : part;
-      breadcrumbs.push({ name: part, path: currentAcc });
+  if (isGuest && currentGuestBase) {
+    const baseName = path.basename(currentGuestBase);
+    breadcrumbs.push({ name: baseName, path: currentGuestBase });
+
+    if (safePath !== currentGuestBase) {
+      const rel = path.relative(currentGuestBase, safePath);
+      const parts = rel.split(path.sep).filter(Boolean);
+      let cur = currentGuestBase;
+      for (const p of parts) {
+        cur = path.join(cur, p);
+        breadcrumbs.push({ name: p, path: cur });
+      }
     }
+  } else {
+    const parts = safePath.split(path.sep);
+    let currentAcc = '';
+    
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i === 0 && part === '') {
+        currentAcc = '/';
+        breadcrumbs.push({ name: 'Root', path: '/' });
+      } else if (i === 0 && /^[a-zA-Z]:$/.test(part)) {
+        currentAcc = part + path.sep;
+        breadcrumbs.push({ name: part, path: currentAcc });
+      } else if (part) {
+        currentAcc = currentAcc ? path.join(currentAcc, part) : part;
+        breadcrumbs.push({ name: part, path: currentAcc });
+      }
+    }
+  }
+
+  let parentPath = null;
+  if (isGuest && currentGuestBase) {
+    parentPath = safePath === currentGuestBase ? null : path.dirname(safePath);
+  } else {
+    parentPath = path.dirname(safePath) === safePath ? null : path.dirname(safePath);
   }
 
   return {
     currentPath: safePath,
-    parentPath: path.dirname(safePath) === safePath ? null : path.dirname(safePath),
+    parentPath,
     breadcrumbs,
     items,
-    bookmarks: getBookmarks(),
+    bookmarks: getBookmarks(user),
     folderStats: {
       totalFiles: currentFileCount,
       totalFolders: currentFolderCount,
@@ -194,8 +275,11 @@ export async function listDirectory(targetPath, showHidden = false) {
   };
 }
 
-export async function readTextFile(filePath) {
+export async function readTextFile(filePath, user = null) {
   const safePath = path.resolve(filePath);
+  if (!isPathAllowedForUser(safePath, user)) {
+    throw new Error('Access denied. You do not have permission to view this file.');
+  }
   const stat = await fs.promises.stat(safePath);
   
   if (stat.size > 15 * 1024 * 1024) {
@@ -212,20 +296,29 @@ export async function readTextFile(filePath) {
   };
 }
 
-export async function writeTextFile(filePath, content) {
+export async function writeTextFile(filePath, content, user = null) {
   const safePath = path.resolve(filePath);
+  if (!isPathAllowedForUser(safePath, user)) {
+    throw new Error('Access denied. You do not have permission to modify files in this directory.');
+  }
   await fs.promises.writeFile(safePath, content, 'utf-8');
   return { success: true, path: safePath };
 }
 
-export async function createDirectory(dirPath) {
+export async function createDirectory(dirPath, user = null) {
   const safePath = path.resolve(dirPath);
+  if (!isPathAllowedForUser(safePath, user)) {
+    throw new Error('Access denied. You do not have permission to create folders here.');
+  }
   await fs.promises.mkdir(safePath, { recursive: true });
   return { success: true, path: safePath };
 }
 
-export async function createFile(filePath) {
+export async function createFile(filePath, user = null) {
   const safePath = path.resolve(filePath);
+  if (!isPathAllowedForUser(safePath, user)) {
+    throw new Error('Access denied. You do not have permission to create files here.');
+  }
   if (fs.existsSync(safePath)) {
     throw new Error('File already exists');
   }
@@ -233,10 +326,16 @@ export async function createFile(filePath) {
   return { success: true, path: safePath };
 }
 
-export async function renameItem(oldPath, newName) {
+export async function renameItem(oldPath, newName, user = null) {
   const safeOld = path.resolve(oldPath);
+  if (!isPathAllowedForUser(safeOld, user)) {
+    throw new Error('Access denied. You do not have permission to rename items here.');
+  }
   const dir = path.dirname(safeOld);
   const safeNew = path.join(dir, newName);
+  if (!isPathAllowedForUser(safeNew, user)) {
+    throw new Error('Access denied. Target name is outside permitted directory.');
+  }
 
   if (fs.existsSync(safeNew)) {
     throw new Error('An item with that name already exists');
@@ -246,8 +345,11 @@ export async function renameItem(oldPath, newName) {
   return { success: true, oldPath: safeOld, newPath: safeNew };
 }
 
-export async function deleteItem(targetPath, permanent = false) {
+export async function deleteItem(targetPath, permanent = false, user = null) {
   const safePath = path.resolve(targetPath);
+  if (!isPathAllowedForUser(safePath, user)) {
+    throw new Error('Access denied. You do not have permission to delete items from this directory.');
+  }
   if (!fs.existsSync(safePath)) {
     throw new Error('Item does not exist');
   }
@@ -286,7 +388,19 @@ export async function deleteItem(targetPath, permanent = false) {
   return { success: true, trashed: false, path: safePath };
 }
 
-export async function searchInDirectory(targetDir, query, maxResults = 50) {
+export async function searchInDirectory(targetDir, query, maxResults = 50, user = null) {
+  let safeDir = targetDir ? path.resolve(targetDir) : null;
+  if (!safeDir) {
+    if (user && user.role === 'guest') {
+      const allowed = getAllowedGuestPaths(user);
+      safeDir = allowed[0] || null;
+    } else {
+      safeDir = os.homedir();
+    }
+  }
+  if (!safeDir || !isPathAllowedForUser(safeDir, user)) {
+    throw new Error('Access denied. You do not have permission to search in this directory.');
+  }
   const results = [];
   const q = query.toLowerCase();
 
@@ -315,6 +429,6 @@ export async function searchInDirectory(targetDir, query, maxResults = 50) {
     } catch (e) {}
   }
 
-  await walk(path.resolve(targetDir));
+  await walk(safeDir);
   return results;
 }

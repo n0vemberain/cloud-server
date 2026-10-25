@@ -23,15 +23,18 @@ import {
   createFile,
   renameItem,
   deleteItem,
-  searchInDirectory
+  searchInDirectory,
+  isPathAllowedForUser
 } from './fileManager.js';
 import { handleFileDownload, handleFileStream } from './streamHandler.js';
 import { getMacMetrics } from './systemInfo.js';
 import { startTunnel, stopTunnel, getTunnelStatus } from './tunnelManager.js';
+import { getActiveSessions, getSessionHistory, revokeSession } from './sessionTracker.js';
 import {
   getGuests,
   createGuest,
   deleteGuest,
+  updateGuest,
   updateGuestPassword,
   updateGuestPermissions,
   getMyRequests,
@@ -58,6 +61,9 @@ export function createApp() {
     destination: (req, file, cb) => {
       const uploadDir = req.headers['x-upload-dir'] || req.query.uploadDir || cfg.defaultRootDir;
       const safeDir = path.resolve(uploadDir);
+      if (!isPathAllowedForUser(safeDir, req.user)) {
+        return cb(new Error('Access denied. You do not have permission to upload to this directory.'));
+      }
       if (!fs.existsSync(safeDir)) {
         fs.mkdirSync(safeDir, { recursive: true });
       }
@@ -146,8 +152,8 @@ export function createApp() {
 
   app.post('/api/guests/create', authMiddleware, requireAdmin, (req, res) => {
     try {
-      const { username, password, permissions } = req.body;
-      const guest = createGuest(username, password, permissions);
+      const { name, username, password, permissions } = req.body;
+      const guest = createGuest(name, username, password, permissions);
       res.json({ success: true, guest });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -166,10 +172,9 @@ export function createApp() {
 
   app.post('/api/guests/update', authMiddleware, requireAdmin, (req, res) => {
     try {
-      const { id, password, permissions } = req.body;
-      if (password) updateGuestPassword(id, password);
-      if (permissions) updateGuestPermissions(id, permissions);
-      res.json({ success: true });
+      const { id, name, password, permissions } = req.body;
+      const result = updateGuest(id, { name, password, permissions });
+      res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
     }
@@ -233,9 +238,9 @@ export function createApp() {
   // ---------------- FILE ROUTES (Protected + Permission checked) ----------------
   app.get('/api/files/browse', authMiddleware, async (req, res) => {
     try {
-      const targetPath = req.query.path || cfg.defaultRootDir;
+      const targetPath = req.query.path || (req.user?.role === 'guest' ? null : cfg.defaultRootDir);
       const showHidden = req.query.showHidden === 'true';
-      const result = await listDirectory(targetPath, showHidden);
+      const result = await listDirectory(targetPath, showHidden, req.user);
       res.json({ success: true, ...result, user: req.user });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -246,7 +251,8 @@ export function createApp() {
     try {
       const { path: searchPath, q } = req.query;
       if (!q) return res.json({ success: true, results: [] });
-      const results = await searchInDirectory(searchPath || cfg.defaultRootDir, q);
+      const targetSearchDir = searchPath || (req.user?.role === 'guest' ? null : cfg.defaultRootDir);
+      const results = await searchInDirectory(targetSearchDir, q, 50, req.user);
       res.json({ success: true, results });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -255,7 +261,7 @@ export function createApp() {
 
   app.get('/api/files/read', authMiddleware, async (req, res) => {
     try {
-      const result = await readTextFile(req.query.path);
+      const result = await readTextFile(req.query.path, req.user);
       res.json({ success: true, ...result });
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -265,7 +271,7 @@ export function createApp() {
   app.post('/api/files/write', authMiddleware, checkPermission('canWrite'), async (req, res) => {
     try {
       const { path: filePath, content } = req.body;
-      const result = await writeTextFile(filePath, content);
+      const result = await writeTextFile(filePath, content, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -275,7 +281,7 @@ export function createApp() {
   app.post('/api/files/mkdir', authMiddleware, checkPermission('canWrite'), async (req, res) => {
     try {
       const { path: dirPath } = req.body;
-      const result = await createDirectory(dirPath);
+      const result = await createDirectory(dirPath, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -285,7 +291,7 @@ export function createApp() {
   app.post('/api/files/create', authMiddleware, checkPermission('canWrite'), async (req, res) => {
     try {
       const { path: filePath } = req.body;
-      const result = await createFile(filePath);
+      const result = await createFile(filePath, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -295,7 +301,7 @@ export function createApp() {
   app.post('/api/files/rename', authMiddleware, checkPermission('canWrite'), async (req, res) => {
     try {
       const { oldPath, newName } = req.body;
-      const result = await renameItem(oldPath, newName);
+      const result = await renameItem(oldPath, newName, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });
@@ -305,7 +311,7 @@ export function createApp() {
   app.post('/api/files/delete', authMiddleware, checkPermission('canDelete'), async (req, res) => {
     try {
       const { path: targetPath, permanent } = req.body;
-      const result = await deleteItem(targetPath, permanent);
+      const result = await deleteItem(targetPath, permanent, req.user);
       res.json(result);
     } catch (err) {
       res.status(400).json({ success: false, error: err.message });

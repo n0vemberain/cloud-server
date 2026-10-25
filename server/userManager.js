@@ -138,14 +138,26 @@ export function getGuests() {
   const guests = loadGuests();
   return guests.map(g => ({
     id: g.id,
+    name: g.name || g.username,
     username: g.username,
-    permissions: g.permissions || { canWrite: false, canDelete: false, canDownload: true },
+    password: g.plainPassword || g.password || '******',
+    permissions: {
+      canWrite: g.permissions?.canWrite ?? false,
+      canDelete: g.permissions?.canDelete ?? false,
+      canDownload: g.permissions?.canDownload ?? true,
+      folderAccess: {
+        desktop: g.permissions?.folderAccess?.desktop ?? false,
+        documents: g.permissions?.folderAccess?.documents ?? false,
+        downloads: g.permissions?.folderAccess?.downloads ?? true
+      }
+    },
     createdAt: g.createdAt
   }));
 }
 
-export function createGuest(username, password, permissions = {}) {
-  const cleanUsername = username.trim().toLowerCase();
+export function createGuest(name, username, password, permissions = {}) {
+  const cleanUsername = (username || '').trim().toLowerCase();
+  const displayName = (name || cleanUsername).trim();
   if (!cleanUsername || cleanUsername === 'admin') {
     throw new Error('Invalid username. "admin" is reserved.');
   }
@@ -161,16 +173,25 @@ export function createGuest(username, password, permissions = {}) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = hashPassword(password, salt);
 
+  const folderAccess = {
+    desktop: Boolean(permissions.folderAccess?.desktop),
+    documents: Boolean(permissions.folderAccess?.documents),
+    downloads: permissions.folderAccess ? Boolean(permissions.folderAccess.downloads) : true
+  };
+
   const newGuest = {
     id: 'guest_' + crypto.randomBytes(6).toString('hex'),
+    name: displayName,
     username: cleanUsername,
+    plainPassword: password,
     salt,
     hash,
     role: 'guest',
     permissions: {
       canWrite: permissions.canWrite ?? false,
       canDelete: permissions.canDelete ?? false,
-      canDownload: permissions.canDownload ?? true
+      canDownload: permissions.canDownload ?? true,
+      folderAccess
     },
     createdAt: new Date().toISOString()
   };
@@ -180,7 +201,9 @@ export function createGuest(username, password, permissions = {}) {
 
   return {
     id: newGuest.id,
+    name: newGuest.name,
     username: newGuest.username,
+    password: newGuest.plainPassword,
     permissions: newGuest.permissions,
     createdAt: newGuest.createdAt
   };
@@ -197,34 +220,59 @@ export function deleteGuest(id) {
   return { success: true, username: deleted.username };
 }
 
-export function updateGuestPassword(id, newPassword) {
-  if (!newPassword || newPassword.length < 4) {
-    throw new Error('Password must be at least 4 characters.');
-  }
+export function updateGuest(id, updates = {}) {
   const guests = loadGuests();
   const guest = guests.find(g => g.id === id);
   if (!guest) {
     throw new Error('Guest not found.');
   }
-  const salt = crypto.randomBytes(16).toString('hex');
-  guest.salt = salt;
-  guest.hash = hashPassword(newPassword, salt);
+
+  if (updates.name && typeof updates.name === 'string' && updates.name.trim()) {
+    guest.name = updates.name.trim();
+  }
+
+  if (updates.password) {
+    if (updates.password.length < 4) {
+      throw new Error('Password must be at least 4 characters.');
+    }
+    const salt = crypto.randomBytes(16).toString('hex');
+    guest.salt = salt;
+    guest.hash = hashPassword(updates.password, salt);
+    guest.plainPassword = updates.password;
+  }
+
+  if (updates.permissions) {
+    const curFolder = guest.permissions?.folderAccess || { desktop: false, documents: false, downloads: true };
+    guest.permissions = {
+      ...guest.permissions,
+      ...updates.permissions,
+      folderAccess: updates.permissions.folderAccess ? {
+        desktop: Boolean(updates.permissions.folderAccess.desktop),
+        documents: Boolean(updates.permissions.folderAccess.documents),
+        downloads: Boolean(updates.permissions.folderAccess.downloads)
+      } : curFolder
+    };
+  }
+
   saveGuests(guests);
-  return { success: true };
+  return {
+    success: true,
+    guest: {
+      id: guest.id,
+      name: guest.name || guest.username,
+      username: guest.username,
+      password: guest.plainPassword || guest.password || '******',
+      permissions: guest.permissions
+    }
+  };
+}
+
+export function updateGuestPassword(id, newPassword) {
+  return updateGuest(id, { password: newPassword });
 }
 
 export function updateGuestPermissions(id, permissions) {
-  const guests = loadGuests();
-  const guest = guests.find(g => g.id === id);
-  if (!guest) {
-    throw new Error('Guest not found.');
-  }
-  guest.permissions = {
-    ...guest.permissions,
-    ...permissions
-  };
-  saveGuests(guests);
-  return { success: true, permissions: guest.permissions };
+  return updateGuest(id, { permissions });
 }
 
 export function verifyGuestPassword(guest, password) {
@@ -244,7 +292,12 @@ export function authenticateUser(username, password, adminConfig) {
         user: {
           username: 'admin',
           role: 'admin',
-          permissions: { canWrite: true, canDelete: true, canDownload: true }
+          permissions: {
+            canWrite: true,
+            canDelete: true,
+            canDownload: true,
+            folderAccess: { desktop: true, documents: true, downloads: true }
+          }
         }
       };
     }
@@ -263,9 +316,19 @@ export function authenticateUser(username, password, adminConfig) {
       success: true,
       user: {
         id: guest.id,
+        name: guest.name || guest.username,
         username: guest.username,
         role: 'guest',
-        permissions: guest.permissions || { canWrite: false, canDelete: false, canDownload: true }
+        permissions: {
+          canWrite: guest.permissions?.canWrite ?? false,
+          canDelete: guest.permissions?.canDelete ?? false,
+          canDownload: guest.permissions?.canDownload ?? true,
+          folderAccess: {
+            desktop: guest.permissions?.folderAccess?.desktop ?? false,
+            documents: guest.permissions?.folderAccess?.documents ?? false,
+            downloads: guest.permissions?.folderAccess?.downloads ?? true
+          }
+        }
       }
     };
   }

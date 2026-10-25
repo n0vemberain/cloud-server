@@ -166,6 +166,16 @@ function formatDate(isoString) {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function getFileSvg(item) {
   if (item.isDirectory) return SVG_ICONS.folder;
   const ext = (item.extension || '').toLowerCase();
@@ -992,16 +1002,22 @@ async function loadGuests() {
       const card = document.createElement('div');
       card.className = 'guest-card';
 
+      const allowedFolders = [];
+      if (g.permissions?.folderAccess?.desktop) allowedFolders.push('Desktop');
+      if (g.permissions?.folderAccess?.documents) allowedFolders.push('Documents');
+      if (g.permissions?.folderAccess?.downloads) allowedFolders.push('Downloads');
+      const foldersText = allowedFolders.length > 0 ? allowedFolders.join(', ') : 'None';
+
       const permsText = [
-        g.permissions.canDownload ? 'Download' : '',
-        g.permissions.canWrite ? 'Upload/Edit' : '',
-        g.permissions.canDelete ? 'Delete' : ''
+        g.permissions?.canDownload ? 'Download' : '',
+        g.permissions?.canWrite ? 'Upload/Edit' : '',
+        g.permissions?.canDelete ? 'Delete' : ''
       ].filter(Boolean).join(', ') || 'Read-Only';
 
       const isAdmin = currentUser?.role === 'admin';
       const adminActions = isAdmin ? `
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-secondary btn-sm change-pass-btn">Change Password</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-secondary btn-sm edit-guest-btn">Edit</button>
           <button class="btn btn-danger btn-sm del-guest-btn">Delete</button>
         </div>
       ` : `
@@ -1011,41 +1027,54 @@ async function loadGuests() {
       `;
 
       card.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-            <span>${g.username}</span>
-            <span class="role-badge guest">guest</span>
+        <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+          <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span>${escapeHtml(g.name || g.username)}</span>
+            <span style="font-size: 12px; color: var(--text-secondary); font-weight: normal;">@${escapeHtml(g.username)}</span>
+            <span class="role-badge guest">Guest</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px; margin-top: 3px;">
+            <span style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Password:</span>
+            <code style="background: var(--bg-primary); padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 11px; font-weight: 600; color: var(--accent-blue);">${escapeHtml(g.password)}</code>
+            <button type="button" class="icon-btn-ghost copy-pass-btn" title="Copy Password" style="padding: 2px; height: auto;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            Allowed Folders: <strong style="color: var(--text-primary);">${escapeHtml(foldersText)}</strong>
           </div>
           <div style="font-size: 12px; color: var(--text-secondary);">
-            Permissions: <strong>${permsText}</strong>
+            Permissions: <strong>${escapeHtml(permsText)}</strong>
           </div>
         </div>
         ${adminActions}
       `;
 
-      const changePassBtn = card.querySelector('.change-pass-btn');
-      if (changePassBtn) {
-        changePassBtn.onclick = () => {
-          openPrompt(`Enter new password for guest "${g.username}":`, '', async (newPass) => {
-            const ures = await fetch('/api/guests/update', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: g.id, password: newPass })
-            });
-            const udata = await ures.json();
-            if (udata.success) {
-              showToast(`Password updated for "${g.username}"`);
-            } else {
-              showToast(udata.error);
-            }
+      const copyPassBtn = card.querySelector('.copy-pass-btn');
+      if (copyPassBtn) {
+        copyPassBtn.onclick = () => {
+          navigator.clipboard.writeText(g.password).then(() => {
+            showToast(`Password copied for @${g.username}`);
+          }).catch(() => {
+            showToast(`Password: ${g.password}`);
           });
         };
+      }
+
+      const editGuestBtn = card.querySelector('.edit-guest-btn');
+      if (editGuestBtn) {
+        editGuestBtn.onclick = () => openEditGuestModal(g);
       }
 
       const delGuestBtn = card.querySelector('.del-guest-btn');
       if (delGuestBtn) {
         delGuestBtn.onclick = async () => {
-          if (confirm(`Delete guest account "${g.username}"?`)) {
+          if (confirm(`Delete guest account "${g.name || g.username}" (@${g.username})?`)) {
             const dres = await fetch('/api/guests/delete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1065,6 +1094,83 @@ async function loadGuests() {
       guestsList.appendChild(card);
     });
   } catch (err) {}
+}
+
+function openEditGuestModal(guest) {
+  const modal = document.getElementById('editGuestModal');
+  if (!modal) return;
+  document.getElementById('editGuestId').value = guest.id;
+  document.getElementById('editGuestName').value = guest.name || guest.username;
+  document.getElementById('editGuestUsername').value = guest.username;
+  document.getElementById('editGuestPassword').value = '';
+  document.getElementById('editFolderDesktop').checked = Boolean(guest.permissions?.folderAccess?.desktop);
+  document.getElementById('editFolderDocuments').checked = Boolean(guest.permissions?.folderAccess?.documents);
+  document.getElementById('editFolderDownloads').checked = Boolean(guest.permissions?.folderAccess?.downloads);
+  document.getElementById('editPermDownload').checked = Boolean(guest.permissions?.canDownload);
+  document.getElementById('editPermWrite').checked = Boolean(guest.permissions?.canWrite);
+  document.getElementById('editPermDelete').checked = Boolean(guest.permissions?.canDelete);
+  modal.classList.add('active');
+}
+
+function closeEditGuestModal() {
+  const modal = document.getElementById('editGuestModal');
+  if (modal) modal.classList.remove('active');
+}
+
+const editGuestCloseBtn = document.getElementById('editGuestCloseBtn');
+const editGuestCancelBtn = document.getElementById('editGuestCancelBtn');
+const editGuestForm = document.getElementById('editGuestForm');
+
+if (editGuestCloseBtn) editGuestCloseBtn.onclick = closeEditGuestModal;
+if (editGuestCancelBtn) editGuestCancelBtn.onclick = closeEditGuestModal;
+
+if (editGuestForm) {
+  editGuestForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editGuestId').value;
+    const name = document.getElementById('editGuestName').value.trim();
+    const password = document.getElementById('editGuestPassword').value;
+    const canDownload = document.getElementById('editPermDownload').checked;
+    const canWrite = document.getElementById('editPermWrite').checked;
+    const canDelete = document.getElementById('editPermDelete').checked;
+    const folderAccess = {
+      desktop: document.getElementById('editFolderDesktop').checked,
+      documents: document.getElementById('editFolderDocuments').checked,
+      downloads: document.getElementById('editFolderDownloads').checked
+    };
+
+    try {
+      const payload = {
+        id,
+        name,
+        permissions: {
+          canDownload,
+          canWrite,
+          canDelete,
+          folderAccess
+        }
+      };
+      if (password && password.trim().length >= 4) {
+        payload.password = password.trim();
+      }
+
+      const res = await fetch('/api/guests/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Guest updated successfully');
+        closeEditGuestModal();
+        loadGuests();
+      } else {
+        showToast(data.error || 'Failed to update guest');
+      }
+    } catch (err) {
+      showToast(err.message);
+    }
+  };
 }
 
 // ---------------- PERMISSION REQUESTS & GUEST PERMISSIONS ----------------
@@ -1169,7 +1275,29 @@ async function loadGuestPermissions() {
 
   const guestPermUsernameBadge = document.getElementById('guestPermUsernameBadge');
   if (guestPermUsernameBadge) {
-    guestPermUsernameBadge.textContent = `@${currentUser?.username || 'guest'}`;
+    const disp = currentUser?.name ? `${currentUser.name} (@${currentUser.username})` : `@${currentUser?.username || 'guest'}`;
+    guestPermUsernameBadge.textContent = disp;
+  }
+
+  // Permitted Folders Badges
+  const guestAllowedFoldersDesc = document.getElementById('guestAllowedFoldersDesc');
+  const guestAllowedFoldersBadges = document.getElementById('guestAllowedFoldersBadges');
+  if (guestAllowedFoldersBadges) {
+    const fa = currentUser?.permissions?.folderAccess || {};
+    const allowed = [];
+    if (fa.desktop) allowed.push('Desktop');
+    if (fa.documents) allowed.push('Documents');
+    if (fa.downloads) allowed.push('Downloads');
+
+    if (guestAllowedFoldersDesc) {
+      guestAllowedFoldersDesc.textContent = allowed.length > 0
+        ? `Access granted to: ${allowed.join(', ')}`
+        : 'No folder access assigned yet. Please contact admin.';
+    }
+
+    guestAllowedFoldersBadges.innerHTML = allowed.map(folder =>
+      `<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">${folder}</span>`
+    ).join('') || '<span class="conn-net-badge" style="color: var(--accent-orange);">None</span>';
   }
 
   let requests = [];
@@ -1228,30 +1356,41 @@ async function requestGuestPermission(permission) {
   }
 }
 
-
-
 createGuestForm.onsubmit = async (e) => {
   e.preventDefault();
+  const name = document.getElementById('guestName').value.trim();
   const username = document.getElementById('guestUsername').value.trim();
   const password = document.getElementById('guestPassword').value;
   const canDownload = document.getElementById('permDownload').checked;
   const canWrite = document.getElementById('permWrite').checked;
   const canDelete = document.getElementById('permDelete').checked;
+  const folderAccess = {
+    desktop: document.getElementById('folderDesktop').checked,
+    documents: document.getElementById('folderDocuments').checked,
+    downloads: document.getElementById('folderDownloads').checked
+  };
 
   try {
     const res = await fetch('/api/guests/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        name,
         username,
         password,
-        permissions: { canDownload, canWrite, canDelete }
+        permissions: {
+          canDownload,
+          canWrite,
+          canDelete,
+          folderAccess
+        }
       })
     });
     const data = await res.json();
     if (data.success) {
-      showToast(`Guest "${username}" created successfully!`);
+      showToast(`Guest "${name || username}" created successfully!`);
       createGuestForm.reset();
+      document.getElementById('folderDownloads').checked = true;
       document.getElementById('permDownload').checked = true;
       loadGuests();
     } else {
