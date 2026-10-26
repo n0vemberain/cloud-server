@@ -1,3 +1,32 @@
+// Auth Token interceptor for seamless remote & local access
+const originalFetch = window.fetch;
+window.fetch = function(input, init = {}) {
+  const token = localStorage.getItem('cloud_token');
+  if (token) {
+    init = init || {};
+    init.headers = init.headers || {};
+    if (init.headers instanceof Headers) {
+      if (!init.headers.has('Authorization')) {
+        init.headers.set('Authorization', `Bearer ${token}`);
+      }
+    } else if (Array.isArray(init.headers)) {
+      if (!init.headers.some(([k]) => k.toLowerCase() === 'authorization')) {
+        init.headers.push(['Authorization', `Bearer ${token}`]);
+      }
+    } else {
+      if (!init.headers['Authorization'] && !init.headers['authorization']) {
+        init.headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+  }
+  return originalFetch.call(this, input, init);
+};
+
+function getAuthTokenQuery() {
+  const token = localStorage.getItem('cloud_token');
+  return token ? `&auth_token=${encodeURIComponent(token)}` : '';
+}
+
 // State
 let currentPath = '';
 let currentItems = [];
@@ -318,6 +347,7 @@ async function checkAuth() {
   try {
     const res = await fetch('/api/auth/status');
     if (res.status === 401) {
+      localStorage.removeItem('cloud_token');
       window.location.href = '/login.html';
       return false;
     }
@@ -630,7 +660,7 @@ function downloadItem(item) {
     showToast('Download permission not granted');
     return;
   }
-  const url = `/api/files/download?path=${encodeURIComponent(item.path)}`;
+  const url = `/api/files/download?path=${encodeURIComponent(item.path)}${getAuthTokenQuery()}`;
   const a = document.createElement('a');
   a.href = url;
   a.download = item.name + (item.isDirectory ? '.zip' : '');
@@ -696,11 +726,11 @@ async function saveCurrentFile() {
 // Media Preview
 function openMediaPreview(item) {
   previewTitle.textContent = item.name;
-  previewDownloadBtn.href = `/api/files/download?path=${encodeURIComponent(item.path)}`;
+  previewDownloadBtn.href = `/api/files/download?path=${encodeURIComponent(item.path)}${getAuthTokenQuery()}`;
   previewDownloadBtn.download = item.name;
   previewContent.innerHTML = '';
 
-  const streamUrl = `/api/files/stream?path=${encodeURIComponent(item.path)}`;
+  const streamUrl = `/api/files/stream?path=${encodeURIComponent(item.path)}${getAuthTokenQuery()}`;
   const mime = (item.mime || '').toLowerCase();
   const ext = (item.extension || '').toLowerCase();
 
@@ -880,7 +910,7 @@ async function confirmDelete(item) {
 // Download Folder as ZIP
 downloadFolderBtn.onclick = () => {
   if (!currentPath) return;
-  const url = `/api/files/download?path=${encodeURIComponent(currentPath)}`;
+  const url = `/api/files/download?path=${encodeURIComponent(currentPath)}${getAuthTokenQuery()}`;
   window.location.href = url;
   showToast('Creating and downloading ZIP archive...');
 };
@@ -2012,6 +2042,7 @@ if (guestProfileForm) {
 
 // Logout
 logoutBtn.onclick = async () => {
+  localStorage.removeItem('cloud_token');
   await fetch('/api/auth/logout', { method: 'POST' });
   window.location.href = '/login.html';
 };

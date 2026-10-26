@@ -79,37 +79,55 @@ export function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-const folderSizeCache = new Map();
+const SKIPPED_DIRS = new Set([
+  'Library',
+  'node_modules',
+  '.git',
+  '.Trash',
+  'System',
+  'Applications',
+  '$RECYCLE.BIN',
+  'System Volume Information'
+]);
 
-// Calculate directory size and file count
-export async function getDirectorySize(dirPath, maxDepth = 2) {
+// Calculate directory size and file count safely with strict scanning limit
+export async function getDirectorySize(dirPath, maxDepth = 1) {
   let totalBytes = 0;
   let fileCount = 0;
   let folderCount = 0;
+  let scanned = 0;
+  const maxScanned = 1000;
 
   async function walk(currentPath, depth) {
-    if (depth > maxDepth) return;
+    if (depth > maxDepth || scanned >= maxScanned) return;
     try {
       const entries = await fs.promises.readdir(currentPath, { withFileTypes: true });
       for (const entry of entries) {
+        if (scanned >= maxScanned) break;
         if (entry.name.startsWith('.')) continue;
-        if (entry.name === 'node_modules' || entry.name === 'Library' || entry.name === '.git') continue;
+        if (SKIPPED_DIRS.has(entry.name)) continue;
         const full = path.join(currentPath, entry.name);
         try {
           if (entry.isDirectory()) {
             folderCount++;
+            scanned++;
             await walk(full, depth + 1);
           } else if (entry.isFile()) {
             const st = await fs.promises.stat(full);
             totalBytes += st.size;
             fileCount++;
+            scanned++;
           }
         } catch (e) {}
       }
     } catch (e) {}
   }
 
-  await walk(dirPath, 0);
+  const baseName = path.basename(dirPath);
+  if (!SKIPPED_DIRS.has(baseName)) {
+    await walk(dirPath, 0);
+  }
+
   return {
     totalBytes,
     fileCount,
@@ -173,27 +191,23 @@ export async function listDirectory(targetPath, showHidden = false, user = null)
     } catch (err) {}
   }
 
-  // Calculate folder sizes in parallel with in-memory caching
+  // Process directories quickly and safely without blocking deep recursive traversal
   const dirItems = await Promise.all(dirEntries.map(async ({ entry, itemPath, itemStat }) => {
-    let dirInfo = folderSizeCache.get(itemPath);
-    if (!dirInfo || dirInfo.mtimeMs !== itemStat.mtimeMs) {
-      try {
-        dirInfo = await getDirectorySize(itemPath, 2);
-        dirInfo.mtimeMs = itemStat.mtimeMs;
-        folderSizeCache.set(itemPath, dirInfo);
-      } catch (e) {
-        dirInfo = { totalBytes: 0, fileCount: 0, formatted: '0 B' };
-      }
+    let itemCount = 0;
+    try {
+      const subEntries = await fs.promises.readdir(itemPath);
+      itemCount = subEntries.length;
+    } catch (e) {
+      itemCount = 0;
     }
-    currentTotalBytes += dirInfo.totalBytes;
 
     return {
       name: entry.name,
       path: itemPath,
       isDirectory: true,
-      size: dirInfo.totalBytes,
-      sizeFormatted: dirInfo.totalBytes > 0 ? dirInfo.formatted : (dirInfo.fileCount === 0 ? 'Empty' : '0 B'),
-      itemCount: dirInfo.fileCount,
+      size: 0,
+      sizeFormatted: itemCount === 0 ? 'Empty' : `${itemCount} item${itemCount === 1 ? '' : 's'}`,
+      itemCount,
       mtime: itemStat.mtime.toISOString(),
       mime: 'folder',
       extension: '',
@@ -422,6 +436,7 @@ export async function searchInDirectory(targetDir, query, maxResults = 50, user 
       const entries = await fs.promises.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.name.startsWith('.')) continue;
+        if (SKIPPED_DIRS.has(entry.name)) continue;
         const fullPath = path.join(dir, entry.name);
 
         if (entry.name.toLowerCase().includes(q)) {

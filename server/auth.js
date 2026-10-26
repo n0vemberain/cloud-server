@@ -171,11 +171,12 @@ export function handleLogin(req, res) {
   // Record connection session (Local vs Remote, device info, IP)
   recordSession(sessionId, payload.username, payload.role, req);
 
+  const isHttps = Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https');
   const cookieOpts = {
     httpOnly: true,
     maxAge: 30 * 24 * 60 * 60 * 1000,
     sameSite: 'lax',
-    secure: false
+    secure: isHttps
   };
   res.cookie('cloud_token', token, cookieOpts);
   res.cookie('mac_token', token, cookieOpts);
