@@ -23,6 +23,28 @@ A modern, responsive personal cloud server application. Turn your computer into 
 
 Personal Cloud Server is a lightweight, self-hosted cloud platform built on Node.js and Express. It enables users to browse, stream, edit, upload, and download files from their computer remotely from any mobile or desktop web browser. It features dual network access (LAN direct access and encrypted Cloudflare Quick Tunnels), role-based multi-user support (Admin and Guest accounts), real-time notifications with download auditing, live direct messaging with auto-read on reply, and active session management with one-click revocation.
 
+### Interface Screenshots
+
+![Personal Cloud Server Interface - 01](images/01.png)
+
+![Personal Cloud Server Interface - 02](images/02.png)
+
+![Personal Cloud Server Interface - 03](images/03.png)
+
+![Personal Cloud Server Interface - 04](images/04.png)
+
+![Personal Cloud Server Interface - 05](images/05.png)
+
+![Personal Cloud Server Interface - 06](images/06.png)
+
+![Personal Cloud Server Interface - 07](images/07.png)
+
+![Personal Cloud Server Interface - 08](images/08.png)
+
+![Personal Cloud Server Interface - 09](images/09.png)
+
+![Personal Cloud Server Interface - 10](images/10.png)
+
 ---
 
 ## Default Administrator Credentials & Initial Setup
