@@ -202,7 +202,7 @@ export function getGuests() {
     permissions: {
       canWrite: g.permissions?.canWrite ?? false,
       canDelete: g.permissions?.canDelete ?? false,
-      canDownload: g.permissions?.canDownload ?? true,
+      canDownload: g.permissions?.canDownload ?? false,
       folderAccess: {
         customFolders: Array.isArray(g.permissions?.folderAccess?.customFolders)
           ? g.permissions.folderAccess.customFolders
@@ -246,7 +246,7 @@ export function createGuest(name, username, password, permissions = {}) {
     permissions: {
       canWrite: permissions.canWrite ?? false,
       canDelete: permissions.canDelete ?? false,
-      canDownload: permissions.canDownload ?? true,
+      canDownload: permissions.canDownload ?? false,
       folderAccess
     },
     createdAt: new Date().toISOString()
@@ -380,7 +380,7 @@ export function authenticateUser(username, password, adminConfig) {
         permissions: {
           canWrite: guest.permissions?.canWrite ?? false,
           canDelete: guest.permissions?.canDelete ?? false,
-          canDownload: guest.permissions?.canDownload ?? true,
+          canDownload: guest.permissions?.canDownload ?? false,
           folderAccess: {
             customFolders: Array.isArray(guest.permissions?.folderAccess?.customFolders)
               ? guest.permissions.folderAccess.customFolders

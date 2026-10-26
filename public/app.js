@@ -1585,8 +1585,21 @@ async function loadGuestPermissions() {
     }
   } catch (err) {}
 
+  const pendingDownload = requests.find(r => r.permission === 'canDownload' && r.status === 'pending');
   const pendingWrite = requests.find(r => r.permission === 'canWrite' && r.status === 'pending');
   const pendingDelete = requests.find(r => r.permission === 'canDelete' && r.status === 'pending');
+
+  const permDownloadStatus = document.getElementById('permDownloadStatus');
+  if (permDownloadStatus) {
+    if (currentUser?.permissions?.canDownload) {
+      permDownloadStatus.innerHTML = '<span class="conn-net-badge local" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); border-color: rgba(48, 209, 88, 0.3);">Granted</span>';
+    } else if (pendingDownload) {
+      permDownloadStatus.innerHTML = '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); border-color: rgba(255, 159, 10, 0.3);">Pending Approval</span>';
+    } else {
+      permDownloadStatus.innerHTML = '<button class="btn btn-primary btn-sm request-btn" style="padding: 4px 10px; font-size: 12px;">Request Permission</button>';
+      permDownloadStatus.querySelector('.request-btn').onclick = () => requestGuestPermission('canDownload');
+    }
+  }
 
   const permWriteStatus = document.getElementById('permWriteStatus');
   if (permWriteStatus) {
@@ -1667,7 +1680,7 @@ createGuestForm.onsubmit = async (e) => {
       createGuestForm.reset();
       createCustomFolders = [];
       renderCreateCustomFolders();
-      document.getElementById('permDownload').checked = true;
+      document.getElementById('permDownload').checked = false;
       loadGuests();
     } else {
       showToast(data.error || 'Failed to create guest');
