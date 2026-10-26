@@ -7,7 +7,7 @@ A modern, responsive personal cloud server application. Turn your computer into 
 ## Table of Contents
 
 - Overview
-- Default Administrator Credentials
+- Default Administrator Credentials & Initial Setup
 - Key Features
 - Technology Stack
 - Step-by-Step Installation & Quick Start
@@ -24,14 +24,27 @@ Personal Cloud Server is a lightweight, self-hosted cloud platform built on Node
 
 ---
 
-## Default Administrator Credentials
+## Default Administrator Credentials & Initial Setup
 
-Upon fresh installation, use the following default administrator credentials to log in:
+When running this server for the first time on any device or after a fresh git clone, use the following default administrator credentials to sign in:
 
-- **Username**: `admin`
-- **Password**: `mac1234`
+| Field | Default Value | Notes |
+|---|---|---|
+| **Username** | `admin` | Fixed master administrator username |
+| **Password** | `mac1234` | Initial master password |
 
-After logging in, you can change your administrator password, customize your display name, and manage guest accounts anytime via **Settings & Administration -> Profile** or **Settings & Administration -> Security**.
+### Signing In for the First Time:
+1. Start the server using `./start.sh` (macOS/Linux) or `start.bat` (Windows).
+2. Open the Local URL (e.g., `http://localhost:7890` or `http://192.168.x.x:7890`) or scan the terminal QR code from your smartphone.
+3. On the authentication page, enter:
+   - **Username**: `admin`
+   - **Password**: `mac1234`
+4. Click **Authenticate** to access the dashboard.
+
+### Recommended Next Steps After Initial Login:
+- **Change Master Password**: Navigate to **Settings & Administration** (gear icon in the sidebar) -> **Security** tab, and change your password to a strong personal passphrase.
+- **Customize Profile & Server Name**: In **Settings & Administration** -> **Profile** tab, you can customize the Administrator display name and Server title.
+- **Create Guest Accounts**: In **Settings & Administration** -> **Guest Users** tab, create accounts for clients, friends, or family members. Specify exact folder paths they are permitted to browse, and toggle download, write, or delete permissions according to your needs. All new guest accounts start clean with zero ungranted permissions by default.
 
 ---
 
@@ -100,8 +113,8 @@ After logging in, you can change your administrator password, customize your dis
 
 ### 1. Clone or Download the Repository
 ```bash
-git clone https://github.com/n0vemberain/cloud-server.git
-cd cloud-server
+git clone https://github.com/n0vemberain/mac-cloud-server.git
+cd mac-cloud-server
 ```
 
 ### 2. Install Dependencies

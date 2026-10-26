@@ -31,7 +31,8 @@ async function main() {
       });
     }
 
-    console.log(`\n\x1b[1m[Authentication] Master Password:\x1b[0m`);
+    console.log(`\n\x1b[1m[Authentication] Administrator Credentials:\x1b[0m`);
+    console.log(`    Username: \x1b[33m\x1b[1madmin\x1b[0m`);
     if (cfg.isConfigured) {
       console.log(`    Password: \x1b[33m[User Configured]\x1b[0m`);
     } else {
