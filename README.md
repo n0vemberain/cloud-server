@@ -15,6 +15,7 @@ A modern, responsive personal cloud server application. Turn your computer into 
 - Configuration & Customization
 - API Endpoints Reference
 - Security Architecture
+- Contact & Support
 
 ---
 
@@ -113,8 +114,8 @@ When running this server for the first time on any device or after a fresh git c
 
 ### 1. Clone or Download the Repository
 ```bash
-git clone https://github.com/n0vemberain/mac-cloud-server.git
-cd mac-cloud-server
+git clone https://github.com/n0vemberain/cloud-server.git
+cd cloud-server
 ```
 
 ### 2. Install Dependencies
@@ -271,3 +272,15 @@ Server settings can be managed directly from the **Settings & Administration** w
 3. **Brute-Force Rate Limiting**: Automatic IP-based request throttling blocks repeated failed login attempts.
 4. **Path Traversal Protection**: All file path parameters are strictly sanitized and resolved within configured directory boundaries. Guest accounts cannot traverse outside their permitted folders.
 5. **Encrypted Remote Transport**: Remote traffic passes through Cloudflare's end-to-end TLS tunnels, preventing cleartext exposure over public networks.
+
+---
+
+## Contact & Support
+
+If you have questions, feedback, feature suggestions, or need assistance, feel free to get in touch:
+
+- **Author**: Fatin Ishraque
+- **Email**: [fatinishraque2@gmail.com](mailto:fatinishraque2@gmail.com)
+- **GitHub**: [github.com/n0vemberain](https://github.com/n0vemberain)
+- **Repository**: [github.com/n0vemberain/cloud-server](https://github.com/n0vemberain/cloud-server)
+
