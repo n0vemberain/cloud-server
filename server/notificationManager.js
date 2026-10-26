@@ -113,7 +113,12 @@ export function getDownloadActivities() {
 
 export function getUnreadDownloadsCount() {
   const activities = loadActivities();
-  return activities.filter(d => !d.read).length;
+  return activities.filter(d => !d.read && (!d.type || d.type === 'download')).length;
+}
+
+export function getUnreadSecurityCount() {
+  const activities = loadActivities();
+  return activities.filter(d => !d.read && (d.type === 'guest_password_changed' || d.type === 'account_activity')).length;
 }
 
 export function markDownloadsAsRead(activityId = null) {

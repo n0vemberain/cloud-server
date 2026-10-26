@@ -2158,24 +2158,37 @@ async function loadAdminNotifications(filter = 'all') {
   if (!unifiedNotifList) return;
   if (currentUser && currentUser.role !== 'admin') return;
   try {
-    const [dlRes, reqRes] = await Promise.all([
+    const [dlRes, reqRes, msgRes] = await Promise.all([
       fetch('/api/notifications/downloads'),
-      fetch('/api/requests/pending')
+      fetch('/api/requests/pending'),
+      fetch('/api/messages')
     ]);
 
-    if (dlRes.status === 401 || reqRes.status === 401) {
+    if (dlRes.status === 401 || reqRes.status === 401 || msgRes.status === 401) {
       window.location.href = '/login.html';
       return;
     }
 
     const dlData = dlRes.ok ? await dlRes.json() : { downloads: [] };
     const reqData = reqRes.ok ? await reqRes.json() : { pending: [] };
+    const msgData = msgRes.ok ? await msgRes.json() : { messages: [] };
 
-    const downloads = (dlData.downloads || []).map(dl => ({
-      kind: 'download',
-      item: dl,
-      timestamp: new Date(dl.timestamp || dl.downloadedAt || Date.now()).getTime()
-    }));
+    // Separate actual downloads from security/account activities
+    const actualDownloads = (dlData.downloads || [])
+      .filter(dl => !dl.type || dl.type === 'download')
+      .map(dl => ({
+        kind: 'download',
+        item: dl,
+        timestamp: new Date(dl.timestamp || dl.downloadedAt || Date.now()).getTime()
+      }));
+
+    const securityActivities = (dlData.downloads || [])
+      .filter(dl => dl.type === 'guest_password_changed' || dl.type === 'account_activity')
+      .map(act => ({
+        kind: 'security',
+        item: act,
+        timestamp: new Date(act.timestamp || act.downloadedAt || Date.now()).getTime()
+      }));
 
     const requests = (reqData.pending || []).map(req => ({
       kind: 'request',
@@ -2183,13 +2196,25 @@ async function loadAdminNotifications(filter = 'all') {
       timestamp: new Date(req.createdAt || Date.now()).getTime()
     }));
 
+    // Messages sent by guests/users to admin or public
+    const messages = (msgData.messages || [])
+      .filter(m => m.senderRole === 'guest' || (m.senderUsername && m.senderUsername.toLowerCase() !== 'admin'))
+      .map(msg => ({
+        kind: 'message',
+        item: msg,
+        timestamp: new Date(msg.createdAt || Date.now()).getTime()
+      }));
+
     let combined = [];
     if (filter === 'downloads') {
-      combined = downloads;
+      // ONLY actual file/folder downloads!
+      combined = actualDownloads;
     } else if (filter === 'requests') {
+      // ONLY pending permission requests!
       combined = requests;
     } else {
-      combined = [...requests, ...downloads];
+      // All Activity: Downloads, Security/Password changes, Messages, Requests!
+      combined = [...requests, ...securityActivities, ...messages, ...actualDownloads];
     }
 
     combined.sort((a, b) => b.timestamp - a.timestamp);
@@ -2275,70 +2300,152 @@ async function loadAdminNotifications(filter = 'all') {
         };
 
         unifiedNotifList.appendChild(card);
+      } else if (entry.kind === 'security') {
+        const act = entry.item;
+        const card = document.createElement('div');
+        const isUnread = !act.read;
+        card.style.cssText = `display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); ${isUnread ? 'border-left: 3px solid var(--accent-orange);' : ''} gap: 12px;`;
+
+        const userDisplay = act.name ? `${escapeHtml(act.name)} (@${escapeHtml(act.username || 'user')})` : `@${escapeHtml(act.username || 'user')}`;
+        const roleBadge = act.role === 'admin'
+          ? '<span class="role-badge admin" style="font-size: 10px;">Admin</span>'
+          : '<span class="role-badge guest" style="font-size: 10px;">Guest</span>';
+
+        card.innerHTML = `
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
+              <span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Security</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
+              ${roleBadge}
+              ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 69, 58, 0.15); color: var(--accent-red); font-size: 10px; border-color: rgba(255, 69, 58, 0.3);">New</span>' : ''}
+            </div>
+            <div style="font-size: 12px; color: var(--text-primary); margin-top: 2px;">
+              ${escapeHtml(act.actionText || 'Guest updated their account password.')}
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+              ${formatDate(act.timestamp || act.downloadedAt)}
+            </div>
+          </div>
+          ${isUnread ? `
+            <div style="flex-shrink: 0;">
+              <button type="button" class="btn btn-secondary btn-sm notif-read-item-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
+            </div>
+          ` : ''}
+        `;
+
+        const readItemBtn = card.querySelector('.notif-read-item-btn');
+        if (readItemBtn) {
+          readItemBtn.onclick = async () => {
+            try {
+              await fetch('/api/notifications/downloads/read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ downloadId: act.id })
+              });
+              loadAdminNotifications(activeNotifTab);
+              updateNotificationsSummary();
+            } catch (e) {}
+          };
+        }
+
+        unifiedNotifList.appendChild(card);
+      } else if (entry.kind === 'message') {
+        const msg = entry.item;
+        const card = document.createElement('div');
+        const isUnread = !msg.read && (!msg.readBy || !msg.readBy.includes('admin'));
+        card.style.cssText = `display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); ${isUnread ? 'border-left: 3px solid var(--accent-green);' : ''} gap: 12px;`;
+
+        const userDisplay = msg.senderName ? `${escapeHtml(msg.senderName)} (@${escapeHtml(msg.senderUsername || 'user')})` : `@${escapeHtml(msg.senderUsername || 'user')}`;
+        const roleBadge = msg.senderRole === 'admin'
+          ? '<span class="role-badge admin" style="font-size: 10px;">Admin</span>'
+          : '<span class="role-badge guest" style="font-size: 10px;">Guest</span>';
+
+        card.innerHTML = `
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
+              <span class="conn-net-badge" style="background: rgba(48, 209, 88, 0.15); color: var(--accent-green); font-size: 10px; border-color: rgba(48, 209, 88, 0.3);">Chat Message</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
+              ${roleBadge}
+              ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 69, 58, 0.15); color: var(--accent-red); font-size: 10px; border-color: rgba(255, 69, 58, 0.3);">New</span>' : ''}
+            </div>
+            <div style="font-size: 12px; color: var(--text-primary); margin-top: 2px; word-break: break-word;">
+              ${escapeHtml(msg.message || msg.text || '')}
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+              ${formatDate(msg.createdAt)}
+            </div>
+          </div>
+          <div style="flex-shrink: 0; display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn btn-primary btn-sm notif-reply-msg-btn" style="padding: 3px 8px; font-size: 11px;">Reply</button>
+            ${isUnread ? `
+              <button type="button" class="btn btn-secondary btn-sm notif-read-msg-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
+            ` : ''}
+          </div>
+        `;
+
+        const replyBtn = card.querySelector('.notif-reply-msg-btn');
+        if (replyBtn) {
+          replyBtn.onclick = () => {
+            closeNotifModal();
+            openMessagesModal(msg.senderId || msg.senderUsername);
+          };
+        }
+
+        const readMsgBtn = card.querySelector('.notif-read-msg-btn');
+        if (readMsgBtn) {
+          readMsgBtn.onclick = async () => {
+            try {
+              await fetch('/api/messages/read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messageId: msg.id })
+              });
+              loadAdminNotifications(activeNotifTab);
+              updateNotificationsSummary();
+            } catch (e) {}
+          };
+        }
+
+        unifiedNotifList.appendChild(card);
       } else if (entry.kind === 'download') {
         const dl = entry.item;
         const card = document.createElement('div');
         const isUnread = !dl.read;
         card.style.cssText = `display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color); ${isUnread ? 'border-left: 3px solid var(--accent-blue);' : ''} gap: 12px;`;
 
-        const isAccountActivity = dl.type === 'guest_password_changed' || dl.type === 'account_activity';
         const userDisplay = dl.name ? `${escapeHtml(dl.name)} (@${escapeHtml(dl.username || 'user')})` : `@${escapeHtml(dl.username || 'user')}`;
         const roleBadge = dl.role === 'admin'
           ? '<span class="role-badge admin" style="font-size: 10px;">Admin</span>'
           : '<span class="role-badge guest" style="font-size: 10px;">Guest</span>';
 
-        if (isAccountActivity) {
-          card.innerHTML = `
-            <div style="min-width: 0; flex: 1;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
-                <span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Security</span>
-                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
-                ${roleBadge}
-                ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 69, 58, 0.15); color: var(--accent-red); font-size: 10px; border-color: rgba(255, 69, 58, 0.3);">New</span>' : ''}
-              </div>
-              <div style="font-size: 12px; color: var(--text-primary); margin-top: 2px;">
-                ${escapeHtml(dl.actionText || 'Guest updated their account password.')}
-              </div>
-              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                ${formatDate(dl.timestamp || dl.downloadedAt)}
-              </div>
-            </div>
-            ${isUnread ? `
-              <div style="flex-shrink: 0;">
-                <button type="button" class="btn btn-secondary btn-sm notif-read-item-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
-              </div>
-            ` : ''}
-          `;
-        } else {
-          const typeLabel = dl.isDirectory ? 'Folder (ZIP)' : 'File';
-          const sizeStr = formatBytes(dl.fileSize || 0);
-          const fileName = dl.fileName || (dl.filePath ? dl.filePath.split(/[/\\]/).filter(Boolean).pop() : 'Download');
+        const typeLabel = dl.isDirectory ? 'Folder (ZIP)' : 'File';
+        const sizeStr = formatBytes(dl.fileSize || 0);
+        const fileName = dl.fileName || (dl.filePath ? dl.filePath.split(/[/\\]/).filter(Boolean).pop() : 'Download');
 
-          card.innerHTML = `
-            <div style="min-width: 0; flex: 1;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
-                <span class="conn-net-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue); font-size: 10px; border-color: rgba(10, 132, 255, 0.3);">${typeLabel} Downloaded</span>
-                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
-                ${roleBadge}
-                ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Unread</span>' : ''}
-              </div>
-              <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); font-family: monospace; word-break: break-all; margin-top: 4px;" title="${escapeHtml(dl.filePath || '')}">
-                ${escapeHtml(fileName)}
-              </div>
-              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
-                <span><strong>Size:</strong> ${sizeStr}</span>
-                <span>&bull;</span>
-                <span><strong>Time:</strong> ${formatDate(dl.timestamp || dl.downloadedAt)}</span>
-                ${dl.filePath ? `<span>&bull;</span><span style="word-break: break-all;"><strong>Path:</strong> ${escapeHtml(dl.filePath)}</span>` : ''}
-              </div>
+        card.innerHTML = `
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px;">
+              <span class="conn-net-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue); font-size: 10px; border-color: rgba(10, 132, 255, 0.3);">${typeLabel} Downloaded</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
+              ${roleBadge}
+              ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Unread</span>' : ''}
             </div>
-            ${isUnread ? `
-              <div style="flex-shrink: 0;">
-                <button type="button" class="btn btn-secondary btn-sm notif-read-item-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
-              </div>
-            ` : ''}
-          `;
-        }
+            <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); font-family: monospace; word-break: break-all; margin-top: 4px;" title="${escapeHtml(dl.filePath || '')}">
+              ${escapeHtml(fileName)}
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <span><strong>Size:</strong> ${sizeStr}</span>
+              <span>&bull;</span>
+              <span><strong>Time:</strong> ${formatDate(dl.timestamp || dl.downloadedAt)}</span>
+              ${dl.filePath ? `<span>&bull;</span><span style="word-break: break-all;"><strong>Path:</strong> ${escapeHtml(dl.filePath)}</span>` : ''}
+            </div>
+          </div>
+          ${isUnread ? `
+            <div style="flex-shrink: 0;">
+              <button type="button" class="btn btn-secondary btn-sm notif-read-item-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
+            </div>
+          ` : ''}
+        `;
 
         const readItemBtn = card.querySelector('.notif-read-item-btn');
         if (readItemBtn) {
@@ -2372,11 +2479,18 @@ if (markAllNotifsReadBtn) {
   markAllNotifsReadBtn.onclick = async () => {
     try {
       if (currentUser?.role === 'admin') {
-        await fetch('/api/notifications/downloads/read', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        });
+        await Promise.all([
+          fetch('/api/notifications/downloads/read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          }),
+          fetch('/api/messages/read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ all: true })
+          })
+        ]);
         showToast('All activity notifications marked as read');
         loadAdminNotifications(activeNotifTab);
         updateNotificationsSummary();

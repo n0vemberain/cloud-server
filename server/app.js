@@ -59,6 +59,7 @@ import {
   recordAccountActivity,
   getDownloadActivities,
   getUnreadDownloadsCount,
+  getUnreadSecurityCount,
   markDownloadsAsRead,
   clearDownloadActivities
 } from './notificationManager.js';
@@ -332,15 +333,17 @@ export function createApp() {
       if (isAdmin) {
         const pending = getPendingRequests();
         const unreadDownloads = getUnreadDownloadsCount();
+        const unreadSecurity = getUnreadSecurityCount();
         const downloads = getDownloadActivities();
         const allMessages = getMessagesForUser(req.user);
-        const totalNotifications = pending.length + unreadDownloads;
+        const totalNotifications = pending.length + unreadDownloads + unreadSecurity;
         return res.json({
           success: true,
           isAdmin: true,
           pendingRequests: pending,
           pendingRequestsCount: pending.length,
           unreadDownloadsCount: unreadDownloads,
+          unreadSecurityCount: unreadSecurity,
           downloads: downloads.slice(0, 50),
           totalNotifications,
           unreadMessagesCount: unreadMsgCount,
