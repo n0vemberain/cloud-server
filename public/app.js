@@ -208,6 +208,16 @@ function formatDate(isoString) {
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatBytes(bytes) {
+  if (bytes === 0 || bytes === null || bytes === undefined || isNaN(bytes)) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  if (i < 0) return '0 B';
+  const val = parseFloat((bytes / Math.pow(k, i)).toFixed(1));
+  return `${val} ${sizes[i] || 'B'}`;
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -2058,8 +2068,11 @@ searchInput.oninput = (e) => {
 // Notifications Modal Management
 let activeNotifTab = 'all';
 
-function openNotifModal(tab = 'all') {
+async function openNotifModal(tab = 'all') {
   if (!notifModal) return;
+  if (!currentUser) {
+    await checkAuth();
+  }
   const isAdmin = currentUser?.role === 'admin';
   notifModal.classList.add('active');
 
@@ -2142,8 +2155,8 @@ async function loadGuestNotifications() {
 }
 
 async function loadAdminNotifications(filter = 'all') {
-  if (currentUser?.role !== 'admin') return;
   if (!unifiedNotifList) return;
+  if (currentUser && currentUser.role !== 'admin') return;
   try {
     const [dlRes, reqRes] = await Promise.all([
       fetch('/api/notifications/downloads'),
@@ -2281,6 +2294,7 @@ async function loadAdminNotifications(filter = 'all') {
                 <span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Security</span>
                 <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
                 ${roleBadge}
+                ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 69, 58, 0.15); color: var(--accent-red); font-size: 10px; border-color: rgba(255, 69, 58, 0.3);">New</span>' : ''}
               </div>
               <div style="font-size: 12px; color: var(--text-primary); margin-top: 2px;">
                 ${escapeHtml(dl.actionText || 'Guest updated their account password.')}
@@ -2289,6 +2303,11 @@ async function loadAdminNotifications(filter = 'all') {
                 ${formatDate(dl.timestamp || dl.downloadedAt)}
               </div>
             </div>
+            ${isUnread ? `
+              <div style="flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary btn-sm notif-read-item-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
+              </div>
+            ` : ''}
           `;
         } else {
           const typeLabel = dl.isDirectory ? 'Folder (ZIP)' : 'File';
@@ -2301,6 +2320,7 @@ async function loadAdminNotifications(filter = 'all') {
                 <span class="conn-net-badge" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue); font-size: 10px; border-color: rgba(10, 132, 255, 0.3);">${typeLabel} Downloaded</span>
                 <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${userDisplay}</span>
                 ${roleBadge}
+                ${isUnread ? '<span class="conn-net-badge" style="background: rgba(255, 159, 10, 0.15); color: var(--accent-orange); font-size: 10px; border-color: rgba(255, 159, 10, 0.3);">Unread</span>' : ''}
               </div>
               <div style="font-size: 13px; font-weight: 600; color: var(--accent-blue); font-family: monospace; word-break: break-all; margin-top: 4px;" title="${escapeHtml(dl.filePath || '')}">
                 ${escapeHtml(fileName)}
@@ -2312,8 +2332,29 @@ async function loadAdminNotifications(filter = 'all') {
                 ${dl.filePath ? `<span>&bull;</span><span style="word-break: break-all;"><strong>Path:</strong> ${escapeHtml(dl.filePath)}</span>` : ''}
               </div>
             </div>
+            ${isUnread ? `
+              <div style="flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary btn-sm notif-read-item-btn" style="padding: 3px 8px; font-size: 11px;">Mark Read</button>
+              </div>
+            ` : ''}
           `;
         }
+
+        const readItemBtn = card.querySelector('.notif-read-item-btn');
+        if (readItemBtn) {
+          readItemBtn.onclick = async () => {
+            try {
+              await fetch('/api/notifications/downloads/read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ downloadId: dl.id })
+              });
+              loadAdminNotifications(activeNotifTab);
+              updateNotificationsSummary();
+            } catch (e) {}
+          };
+        }
+
         unifiedNotifList.appendChild(card);
       }
     });
